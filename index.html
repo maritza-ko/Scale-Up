@@ -1604,7 +1604,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
     dom.aiParamsBtn.disabled = true;
     dom.aiParamsBtn.textContent = '🤖 AI 파라미터 적용 중...';
     
-    if (!process.env.API_KEY) {
+    if (typeof process === 'undefined' || !process.env.API_KEY) {
         console.error("API_KEY environment variable is not set.");
         alert('API 키가 설정되지 않았습니다. 배포 환경(예: Vercel)에 API_KEY 환경 변수를 추가해야 합니다.');
         dom.aiParamsBtn.disabled = false;
