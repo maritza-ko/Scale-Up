@@ -95,7 +95,7 @@
 
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
   /* PNL 입력값 변경 시 ROI와 동기화 및 즉시 계산이 일어나도록 oninput 추가 */
-  input[type="text"],input[type="number"]{width:100%;background:#0d1624;color:#e6edf3;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px}
+  input[type="text"],input[type="number"],input[type="password"]{width:100%;background:#0d1624;color:#e6edf3;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px}
   input:disabled { background: #0a1018; color: var(--muted); }
   .btn{display:inline-block;background:linear-gradient(90deg,#38bdf8,#60a5fa);color:#001018;font-weight:800;border:none;padding:9px 12px;border-radius:10px;cursor:pointer}
   .btn:disabled { background: var(--slate); color: var(--muted); cursor: not-allowed; }
@@ -185,6 +185,17 @@
       <label for="store_slider" style="margin-bottom: 8px;">입력: 총 매장 수 <span id="slider_val_display" style="font-weight: bold; color: var(--skyL);">10</span>개</label>
       <input id="store_slider" type="range" min="0" max="1000" value="0" style="width: 100%;">
       <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">드래그하여 매장 수 조절 (10 ~ 20,000)</div>
+      
+      <div id="api_key_entry_container" style="margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px;">
+        <label for="api_key_input">Gemini API Key</label>
+        <input id="api_key_input" type="password" placeholder="API 키를 여기에 붙여넣으세요" style="margin-bottom: 4px;">
+        <div class="note" style="border-top: none; padding-top: 0; margin-top: 0;">AI 추천 기능을 사용하려면 API 키가 필요합니다. 키는 브라우저에만 저장되며 서버로 전송되지 않습니다.</div>
+      </div>
+      
+      <div id="api_key_saved_container" style="display: none; margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px;">
+        <div class="note" style="border-top: none; padding-top: 0; margin-top: 0; color: var(--green);">✓ API 키가 안전하게 저장되었습니다.</div>
+        <button id="change_api_key_btn" class="pill-btn" style="margin-top: 8px;">키 변경</button>
+      </div>
       
       <button id="ai_params" class="btn" style="margin-top: 12px;">🤖 AI 추천 파라미터 적용</button>
       <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">클릭 시, AI가 추론한 시장 데이터(원가 할인율, 센터 급여 등)를 불러와 시뮬레이션에 적용합니다.</div>
@@ -702,6 +713,10 @@
   const dom = {
     storeSlider: document.getElementById('store_slider'),
     sliderValDisplay: document.getElementById('slider_val_display'),
+    apiKeyInput: document.getElementById('api_key_input'),
+    apiKeyEntryContainer: document.getElementById('api_key_entry_container'),
+    apiKeySavedContainer: document.getElementById('api_key_saved_container'),
+    changeApiKeyBtn: document.getElementById('change_api_key_btn'),
     aiParamsBtn: document.getElementById('ai_params'),
     applyChangesBtn: document.getElementById('apply_changes'),
     forceLevelButtons: {
@@ -1599,21 +1614,33 @@ function calculateAllStaff(storeCount, baseInputs, level) {
   function hideCapexModal() {
       dom.modal.backdrop.style.display = 'none';
   }
+  
+  function updateApiKeyUIState() {
+      const savedKey = localStorage.getItem('geminiApiKey');
+      if (savedKey) {
+          dom.apiKeyInput.value = savedKey;
+          dom.apiKeyEntryContainer.style.display = 'none';
+          dom.apiKeySavedContainer.style.display = 'block';
+      } else {
+          dom.apiKeyEntryContainer.style.display = 'block';
+          dom.apiKeySavedContainer.style.display = 'none';
+      }
+  }
 
   async function fetchAiParameters() {
     dom.aiParamsBtn.disabled = true;
     dom.aiParamsBtn.textContent = '🤖 AI 파라미터 적용 중...';
-    
-    if (typeof process === 'undefined' || !process.env.API_KEY) {
-        console.error("API_KEY environment variable is not set.");
-        alert('API 키가 설정되지 않았습니다. 배포 환경(예: Vercel)에 API_KEY 환경 변수를 추가해야 합니다.');
+
+    const apiKey = dom.apiKeyInput.value.trim();
+    if (!apiKey) {
+        alert('Gemini API 키를 입력해주세요.');
         dom.aiParamsBtn.disabled = false;
         dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
         return;
     }
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: apiKey });
         
         const prompt = `
             You are an expert financial analyst for franchise business models in South Korea.
@@ -1665,18 +1692,19 @@ function calculateAllStaff(storeCount, baseInputs, level) {
         
         const aiData = JSON.parse(response.text);
         
-        // Validate and update state
         if (aiData.cogsDiscountTiers && aiData.centerStaffSalaries) {
             state.aiParams = aiData;
+            localStorage.setItem('geminiApiKey', apiKey);
+            updateApiKeyUIState();
             alert('AI 추천 파라미터가 성공적으로 적용되었습니다.');
-            updateAllUI(); // Recalculate everything with new AI data
+            updateAllUI();
         } else {
             throw new Error("Invalid data structure from AI.");
         }
 
     } catch (error) {
         console.error("AI Parameter Fetch Error:", error);
-        alert('AI 파라미터 적용 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        alert('AI 파라미터 적용 중 오류가 발생했습니다. API 키가 올바른지 확인해주세요.');
     } finally {
         dom.aiParamsBtn.disabled = false;
         dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
@@ -1697,6 +1725,12 @@ function calculateAllStaff(storeCount, baseInputs, level) {
 
     dom.applyChangesBtn.addEventListener('click', updateAllUI);
     dom.aiParamsBtn.addEventListener('click', fetchAiParameters);
+    
+    dom.changeApiKeyBtn.addEventListener('click', () => {
+        localStorage.removeItem('geminiApiKey');
+        dom.apiKeyInput.value = '';
+        updateApiKeyUIState();
+    });
     
     Object.entries(dom.forceLevelButtons).forEach(([key, btn]) => {
         btn.addEventListener('click', () => {
@@ -1744,6 +1778,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
     });
 
     setupEventListeners();
+    updateApiKeyUIState();
     updateAllUI();
   });
 </script>
