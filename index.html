@@ -307,33 +307,35 @@
         <label>POS·인터넷(월) <input id="pl_saas" type="text" value="150,000" /></label>
       </div>
       <div class="card">
-        <div class="lead">인건비 & 운영 기본 가정</div>
-        <label>근무시간(시간/일) <input id="pl_hours" type="text" value="13" /></label>
-        <label>기본 시급(원) <input id="pl_base_wage" type="text" value="10,320" /></label>
-        <label>책정 시급 (기본 × 1.2) <input id="pl_calc_wage" type="text" value="12,384" readonly /></label>
-        <label>월 일수 <input id="pl_days" type="text" value="30" /></label>
-        <div class="note" style="border:none; padding:0; margin-top: 8px;">모든 인건비 계산의 기초가 되는 값입니다.</div>
-        
-        <div class="lead" id="assumptions_level_title" style="margin-top: 16px;">물류 및 C레벨 가정</div>
-        <label>COGS 대비 3PL 비율(0~1) <input id="pl_3pl_rate" type="text" value="0.03" /></label>
-        
-        <div id="pl_b_savings_container">
-             <label>자동화 인력 절감율 (<span id="pl_b_level_label">C레벨</span>) <input id="pl_b_savings" type="text" value="0.15" /></label>
-        </div>
-        
-        <div id="pl_patrol_container">
-            <label>순회 관리 인력 1인당 담당 매장 수 (<span id="pl_patrol_stores_label">C레벨</span>) <input id="pl_patrol_stores" type="text" value="---" disabled/></label>
-            <label>순회 관리 인력 시급 승수 (<span id="pl_patrol_wage_label">C레벨</span>) <input id="pl_patrol_wage" type="text" value="---" disabled/></label>
-        </div>
-        
-        <div id="pl_washing_container">
-            <label>중앙 세척/소분 인력 1인당 담당 매장 수 (<span id="pl_washing_stores_label">C레벨</span>) <input id="pl_washing_stores" type="text" value="---" disabled/></label>
-            <label>중앙 세척/소분 인력 시급 승수 (<span id="pl_washing_wage_label">C레벨</span>) <input id="pl_washing_wage" type="text" value="---" disabled/></label>
-        </div>
+          <div class="lead">인건비 & 운영 기본 가정</div>
+          <label>근무시간(시간/일) <input id="pl_hours" type="text" value="13" /></label>
+          <label>기본 시급(원) <input id="pl_base_wage" type="text" value="10,320" /></label>
+          <label>책정 시급 (기본 × 1.2) <input id="pl_calc_wage" type="text" value="12,384" readonly /></label>
+          <label>월 일수 <input id="pl_days" type="text" value="30" /></label>
+          <div class="note" style="border:none; padding:0; margin-top: 8px;">모든 인건비 계산의 기초가 되는 값입니다.</div>
+          
+          <div id="assumptions_card">
+              <div class="lead" id="assumptions_level_title" style="margin-top: 16px;">물류 및 C레벨 가정</div>
+              <label>COGS 대비 3PL 비율(0~1) <input id="pl_3pl_rate" type="text" value="0.03" /></label>
+              
+              <div id="pl_b_savings_container">
+                   <label>자동화 인력 절감율 (<span id="pl_b_level_label">C레벨</span>) <input id="pl_b_savings" type="text" value="0.15" /></label>
+              </div>
+              
+              <div id="pl_patrol_container">
+                  <label>순회 관리 인력 1인당 담당 매장 수 (<span id="pl_patrol_stores_label">C레벨</span>) <input id="pl_patrol_stores" type="text" value="---" disabled/></label>
+                  <label>순회 관리 인력 시급 승수 (<span id="pl_patrol_wage_label">C레벨</span>) <input id="pl_patrol_wage" type="text" value="---" disabled/></label>
+              </div>
+              
+              <div id="pl_washing_container">
+                  <label>중앙 세척/소분 인력 1인당 담당 매장 수 (<span id="pl_washing_stores_label">C레벨</span>) <input id="pl_washing_stores" type="text" value="---" disabled/></label>
+                  <label>중앙 세척/소분 인력 시급 승수 (<span id="pl_washing_wage_label">C레벨</span>) <input id="pl_washing_wage" type="text" value="---" disabled/></label>
+              </div>
+          </div>
 
-        <label>점포 CAPEX(회수기간 계산) <input id="pl_capex" type="text" value="43,949,360" readonly /></label>
-        
-        <div class="row" style="margin-top: 16px;"><button class="btn" id="apply_changes">입력값 최종 반영</button></div>
+          <label>점포 CAPEX(회수기간 계산) <input id="pl_capex" type="text" value="43,949,360" readonly /></label>
+          
+          <div class="row" style="margin-top: 16px;"><button class="btn" id="apply_changes">입력값 최종 반영</button></div>
       </div>
     </div>
 
@@ -765,6 +767,7 @@
     },
     assumptions: {
       levelTitle: document.getElementById('assumptions_level_title'),
+      assumptionsCard: document.getElementById('assumptions_card'),
       bSavingsContainer: document.getElementById('pl_b_savings_container'),
       patrolContainer: document.getElementById('pl_patrol_container'),
       washingContainer: document.getElementById('pl_washing_container'),
@@ -1048,47 +1051,47 @@
     return discount;
   }
 
-  function calculateCorporateStaff(storeCount) {
-      const baseSupport = 5;
-      const incrementalSupport = Math.floor(storeCount / 50);
-      const support = baseSupport + incrementalSupport;
+ function calculateCorporateStaff(storeCount) {
+    const baseSupport = 5;
+    const incrementalSupport = Math.floor(storeCount / 50);
+    const support = baseSupport + incrementalSupport;
 
-      let cs = 0;
-      if (storeCount <= 100) {
-          cs = Math.ceil(storeCount / 10);
-      } else if (storeCount <= 500) {
-          cs = Math.ceil(100 / 10) + Math.ceil((storeCount - 100) / 20);
-      } else {
-          cs = Math.ceil(100 / 10) + Math.ceil(400 / 20) + Math.ceil((storeCount - 500) / 30);
-      }
-      return { support, cs, total: support + cs };
-  }
+    let cs = 0;
+    if (storeCount <= 100) {
+        cs = Math.ceil(storeCount / 10);
+    } else if (storeCount <= 500) {
+        cs = Math.ceil(100 / 10) + Math.ceil((storeCount - 100) / 20);
+    } else {
+        cs = Math.ceil(100 / 10) + Math.ceil(400 / 20) + Math.ceil((storeCount - 500) / 30);
+    }
+    return { support, cs, total: support + cs };
+}
+
+function calculateRegionalStaff(storeCount) {
+    const regionalHubManagers = Math.floor(storeCount / STORES_PER_REGIONAL_CENTER);
+    const techSupport = Math.ceil(storeCount / 20);
+    return { regionalHubManagers, techSupport, total: regionalHubManagers + techSupport };
+}
+
+function calculateAllStaff(storeCount, baseInputs, level) {
+  const corporate = calculateCorporateStaff(storeCount);
+  const regional = calculateRegionalStaff(storeCount);
+  const washing = calculateWashingLaborCost(storeCount, baseInputs, level);
+  const patrol = calculatePatrolLaborCost(storeCount, baseInputs, level);
   
-  function calculateRegionalStaff(storeCount) {
-      const regionalHubManagers = Math.floor(storeCount / STORES_PER_REGIONAL_CENTER);
-      const techSupport = Math.ceil(storeCount / 20);
-      return { regionalHubManagers, techSupport, total: regionalHubManagers + techSupport };
-  }
+  const hqDirector = 1;
+  const total = hqDirector + corporate.total + regional.total + washing.staffCount + patrol.staffCount;
   
-  function calculateAllStaff(storeCount, baseInputs, level) {
-    const corporate = calculateCorporateStaff(storeCount);
-    const regional = calculateRegionalStaff(storeCount);
-    const washing = calculateWashingLaborCost(storeCount, baseInputs, level);
-    const patrol = calculatePatrolLaborCost(storeCount, baseInputs, level);
-    
-    const hqDirector = 1;
-    const total = hqDirector + corporate.total + regional.total + washing.staffCount + patrol.staffCount;
-    
-    return {
-        hqDirector,
-        corporate,
-        regional,
-        washing,
-        patrol,
-        total,
-        regionalCount: regional.regionalHubManagers
-    };
-  }
+  return {
+      hqDirector,
+      corporate,
+      regional,
+      washing,
+      patrol,
+      total,
+      regionalCount: regional.regionalHubManagers
+  };
+}
 
   function calculateTotalCentralWages(allStaffData) {
       const salaries = state.aiParams.centerStaffSalaries;
@@ -1121,7 +1124,7 @@
       return { total, hqBase, regionalTotal, perEmployeeTotal, regionalCount };
   }
   
-  function calculateWashingLaborCost(storeCount, baseInputs, level) {
+ function calculateWashingLaborCost(storeCount, baseInputs, level) {
       if (level !== 'A') return { totalCost: 0, staffCount: 0 };
 
       const storesPerStaff = baseInputs.assumptions.washingStores > 0 ? baseInputs.assumptions.washingStores : 1;
@@ -1133,7 +1136,7 @@
       return { totalCost: monthlyCost, staffCount };
   }
 
-  function calculatePatrolLaborCost(storeCount, baseInputs, level) {
+ function calculatePatrolLaborCost(storeCount, baseInputs, level) {
     if (level === 'C') return { totalCost: 0, staffCount: 0 };
     
     const calculatedWage = baseInputs.fixed.baseWage * 1.2;
@@ -1141,7 +1144,7 @@
     
     // For Level B, patrol staff is now active.
     if (level === 'B') {
-        storesPerStaff = baseInputs.assumptions.patrolStores > 0 ? baseInputs.assumptions.patrolStores : 1;
+        storesPerStaff = baseInputs.assumptions.patrolStores > 0 ? baseInputs.assumptions.patrolStores : 20;
         wageMultiplier = baseInputs.assumptions.patrolWage;
     } else { // Level A
         storesPerStaff = baseInputs.assumptions.patrolStores > 0 ? baseInputs.assumptions.patrolStores : 8; // Corrected default for A
@@ -1335,6 +1338,13 @@
   }
   
   function updateAssumptionsUI(level) {
+      const assumptionsCard = dom.assumptions.assumptionsCard;
+      if (level === 'C') {
+          assumptionsCard.style.display = 'none';
+          return;
+      }
+      assumptionsCard.style.display = 'block';
+      
       dom.assumptions.levelTitle.textContent = `물류 및 ${level}레벨 가정`;
       const baseWage = gv('baseWage');
       const calculatedWage = baseWage * 1.2;
@@ -1593,6 +1603,14 @@
   async function fetchAiParameters() {
     dom.aiParamsBtn.disabled = true;
     dom.aiParamsBtn.textContent = '🤖 AI 파라미터 적용 중...';
+    
+    if (!process.env.API_KEY) {
+        console.error("API_KEY environment variable is not set.");
+        alert('API 키가 설정되지 않았습니다. 배포 환경(예: Vercel)에 API_KEY 환경 변수를 추가해야 합니다.');
+        dom.aiParamsBtn.disabled = false;
+        dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
+        return;
+    }
 
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -1732,4 +1750,3 @@
 <script type="module" src="/index.tsx"></script>
 </body>
 </html>
-C레벨에서 물류 및 C레벨 가정은 의미 없어. 그러니 자동으로 숨겨줘.
