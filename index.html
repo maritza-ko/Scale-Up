@@ -1,0 +1,1735 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>딱마리치킨 | 스케일업 시뮬레이터</title>
+<style>
+  :root{
+    /* Dim palette (high contrast) */
+    --bg:#0b1118;           /* page background */
+    --panel:#0f1725;        /* section/card background */
+    --ink:#e6edf3;          /* primary text */
+    --muted:#a9bbcf;        /* secondary text */
+    --line:#1e2b3c;         /* borders */
+    --chip:#0c1420;         /* chip background */
+    --radius:14px;
+    /* Section key colors */
+    --sky:#38bdf8;          /* 결론 */
+    --skyL:#7dd3fc;         /* 예산 */
+    --green:#22c55e;        /* OPEX */
+    --indigo:#818cf8;       /* Flow */
+    --purple:#a78bfa;       /* ROI & P&L */
+    --teal:#2dd4bf;         /* Center */
+    --rose:#fb7185;         /* Compliance */
+    --amber:#f59e0b;        /* Roadmap */
+    --slate:#94a3b8;        /* Decision */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,Arial,'Noto Sans KR',sans-serif}
+  .wrap{max-width:1100px;margin:28px auto 60px;padding:0 20px}
+  header{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+  h1{font-size:28px;margin:0}
+  .sub{color:var(--muted);font-size:14px}
+  .tag{display:inline-block;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--ink);background:#0d1624}
+  nav{position:sticky;top:0;z-index:10;background:rgba(11,17,24,.86);backdrop-filter:blur(6px);
+      display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px;border:1px solid var(--line);
+      border-radius:999px;padding:8px}
+  nav a{padding:8px 12px;border-radius:999px;border:1px solid var(--line);text-decoration:none;color:var(--muted);font-size:13px;background:#0d1624}
+  nav a:hover{border-color:#314358;color:#ffffff}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px;
+          box-shadow:0 12px 30px rgba(0,0,0,.25)}
+  section h2{margin:0 0 10px;font-size:20px}
+  .secbar{height:7px;border-radius:999px;margin:-7px 0 12px}
+  /* Section tints */
+  .tint:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10}
+  .sec-sky.tint:before{background:linear-gradient(180deg, rgba(56,189,248,.25), transparent 160px)}
+  .sec-skyL.tint:before{background:linear-gradient(180deg, rgba(125,211,252,.22), transparent 160px)}
+  .sec-green.tint:before{background:linear-gradient(180deg, rgba(34,197,94,.22), transparent 160px)}
+  .sec-indigo.tint:before{background:linear-gradient(180deg, rgba(129,140,248,.22), transparent 160px)}
+  .sec-purple.tint:before{background:linear-gradient(180deg, rgba(167,139,250,.22), transparent 160px)}
+  .sec-teal.tint:before{background:linear-gradient(180deg, rgba(45,212,191,.22), transparent 160px)}
+  .sec-rose.tint:before{background:linear-gradient(180deg, rgba(251,113,133,.22), transparent 160px)}
+  .sec-amber.tint:before{background:linear-gradient(180deg, rgba(245,158,11,.22), transparent 160px)}
+  .sec-slate.tint:before{background:linear-gradient(180deg, rgba(148,163,184,.22), transparent 160px)}
+  .sec-sky .secbar{background:linear-gradient(90deg,var(--sky),#7dd3fc)}
+  .sec-skyL .secbar{background:linear-gradient(90deg,var(--skyL),#bde5fc)}
+  .sec-green .secbar{background:linear-gradient(90deg,var(--green),#86efac)}
+  .sec-indigo .secbar{background:linear-gradient(90deg,var(--indigo),#a5b4fc)}
+  .sec-purple .secbar{background:linear-gradient(90deg,var(--purple),#c4b5fd)}
+  .sec-teal .secbar{background:linear-gradient(90deg,var(--teal),#5eead4)}
+  .sec-rose .secbar{background:linear-gradient(90deg,var(--rose),#fecdd3)}
+  .sec-amber .secbar{background:linear-gradient(90deg,var(--amber),#fcd34d)}
+  .sec-slate .secbar{background:linear-gradient(90deg,var(--slate),#cbd5e1)}
+  .accentL{border-left:6px solid rgba(255,255,255,.06);padding-left:10px}
+  /* Common UI */
+  .grid{display:grid;gap:12px}
+  .g-2{grid-template-columns:repeat(2,1fr)}
+  .g-3{grid-template-columns:repeat(3,1fr)}
+  .card{border:1px solid var(--line);border-radius:12px;padding:14px;background:#0f1b2c}
+  .lead{font-size:18px;font-weight:800}
+  .k{font-size:12px;color:var(--muted)}
+  .v{font-size:24px;font-weight:900;color:#ffffff}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;background:var(--chip);color:var(--ink)}
+  .chip.clickable {
+    border-color: var(--sky);
+    color: var(--skyL);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .chip.clickable:hover {
+    background-color: var(--sky);
+    color: var(--bg);
+  }
+  .chip.clickable:hover b {
+    color: var(--bg);
+  }
+  .note{margin-top:10px;color:var(--muted);font-size:12px;border-top:1px dashed var(--line);padding-top:10px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border-bottom:1px solid var(--line);padding:10px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  thead th{background:#0d1624}
+  tbody tr:nth-child(even){background:#101b2b}   /* zebra */
+  tbody tr:hover td{background:#112235}         /* hover */
+
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+  /* PNL 입력값 변경 시 ROI와 동기화 및 즉시 계산이 일어나도록 oninput 추가 */
+  input[type="text"],input[type="number"]{width:100%;background:#0d1624;color:#e6edf3;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px}
+  input:disabled { background: #0a1018; color: var(--muted); }
+  .btn{display:inline-block;background:linear-gradient(90deg,#38bdf8,#60a5fa);color:#001018;font-weight:800;border:none;padding:9px 12px;border-radius:10px;cursor:pointer}
+  .btn:disabled { background: var(--slate); color: var(--muted); cursor: not-allowed; }
+  .row{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;background:#0d1624;color:#d1e0ee}
+  .kpiBar{display:flex;gap:8px;flex-wrap:wrap}
+  .kpiBar .chip {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+  .kpiBar .chip > span, .kpiBar .chip > b:last-of-type {
+    font-weight: 900;
+    font-size: 1.1em;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .kpiBar .chip b{color:#fff}
+
+  .legend-rows{display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:center;min-width:300px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  canvas{width:230px;height:230px;max-width:100%}
+
+  /* Modal Styles */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); z-index: 100; display: none; }
+  .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,.3); z-index: 101; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 15px; }
+  .modal-header h3 { margin: 0; font-size: 18px; }
+  .modal-close { background: none; border: none; font-size: 24px; color: var(--muted); cursor: pointer; }
+  .modal-body ul { padding-left: 20px; margin: 0; }
+  .modal-body li { margin-bottom: 8px; }
+  .modal-body h4 { margin: 15px 0 8px; font-size: 16px; border-bottom: 1px dashed var(--line); padding-bottom: 5px; }
+  .modal-body .total-row { font-weight: bold; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+  
+  /* Simulator Section Specific Font Sizes */
+  #simulator label[for="store_slider"] { font-size: 14px; }
+  #slider_val_display { font-size: 16px; }
+  #simulator .note { font-size: 13px; }
+  #ai_params { font-size: 14px; padding: 10px 14px; }
+  #simulator .lead { font-size: 20px; }
+  
+  .force-level-controls { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .pill-btn { background: var(--chip); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .pill-btn:hover { border-color: #314358; color: #fff; }
+  .pill-btn.active { background: var(--sky); color: var(--bg); border-color: var(--sky); font-weight: bold; }
+  
+  @media (max-width:900px){ .g-2,.g-3{grid-template-columns:1fr} nav{position:static} }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>딱마리치킨 ─ 스케일업 시뮬레이터</h1>
+      <div class="sub">현 단계: <b>Level C 매장 10개 + 관제센터 1곳</b> · 장기: <b>C → B → A</b> 단계 고도화</div>
+    </div>
+    <span class="tag">임원용 요약</span>
+    <span class="tag">Live Preview</span>
+  </header>
+
+  <nav>
+    <a href="#simulator">시뮬레이터</a>
+    <a href="#one">결론</a>
+    <a href="#capex">예산</a>
+    <a href="#opex">OPEX</a>
+    <a href="#pnl">단위 P&L</a>
+    <a href="#total-pnl">총괄 P&L</a>
+    <a href="#hq-pnl">본사 P&L</a>
+    <a href="#scenario">비교 분석</a>
+    <a href="#roadmap">로드맵</a>
+  </nav>
+
+  <!-- 스케일업 시뮬레이터 -->
+  <section id="simulator" class="sec-purple tint">
+    <div class="secbar"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+        <h2 class="accentL" style="margin: 0;">⚙️ 스케일업 시뮬레이터</h2>
+        <div class="force-level-controls">
+            <span class="k">레벨 강제 전환:</span>
+            <button class="pill-btn active" id="force_level_auto">자동</button>
+            <button class="pill-btn" id="force_level_c">C레벨</button>
+            <button class="pill-btn" id="force_level_b">B레벨</button>
+            <button class="pill-btn" id="force_level_a">A레벨</button>
+        </div>
+    </div>
+    <div class="card">
+      <label for="store_slider" style="margin-bottom: 8px;">입력: 총 매장 수 <span id="slider_val_display" style="font-weight: bold; color: var(--skyL);">10</span>개</label>
+      <input id="store_slider" type="range" min="0" max="1000" value="0" style="width: 100%;">
+      <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">드래그하여 매장 수 조절 (10 ~ 20,000)</div>
+      
+      <button id="ai_params" class="btn" style="margin-top: 12px;">🤖 AI 추천 파라미터 적용</button>
+      <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">클릭 시, AI가 추론한 시장 데이터(원가 할인율, 센터 급여 등)를 불러와 시뮬레이션에 적용합니다.</div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="lead">결과: 동적 요약</div>
+      <div class="kpiBar" id="dynamic_summary" style="margin-top: 8px;">
+        <span class="chip">총 매장 수: <b id="summary_stores">10</b></span>
+        <span class="chip clickable" id="summary_level_chip" title="클릭하여 상세 내역 보기">자동화 레벨: <b id="summary_level">Level C</b></span>
+        <span class="chip">단위 점포 CAPEX: <b id="summary_capex">₩43,949,360</b></span>
+      </div>
+      <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">매장 수에 따라 자동화 레벨, CAPEX, 원가, 인건비가 자동 조정됩니다.</div>
+    </div>
+  </section>
+
+  <!-- 결론 -->
+  <section id="one" class="sec-sky tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">① 결론 <span class="pill">Sky</span></h2>
+    <div class="grid g-3">
+      <div class="card">
+        <div class="k">핵심 제안</div>
+        <div class="v" id="conclusion_proposal">10개 <span style="color:var(--sky)">Level C</span></div>
+        <div class="k" id="conclusion_staff">본사/거점 총원: 8명</div>
+      </div>
+      <div class="card">
+        <div class="k">장기 방향</div>
+        <div class="v">C → B → A</div>
+        <div class="k">게이트 충족 시 단계 전환</div>
+      </div>
+      <div class="card">
+        <div class="k">현실성</div>
+        <div class="v">즉시 착수 가능</div>
+        <div class="k">국내 장비·규정 기반</div>
+      </div>
+    </div>
+    <div class="note" id="conclusion_staff_note"><b>주석</b> — 총원 8명 구성: 본사 6명(지원 5명, CS 1명), 지점장 0명, 기술지원 1명, 중앙 세척/소분 0명 (A레벨), 순회 관리 0명 (B/A레벨).</div>
+  </section>
+
+  <!-- 예산 -->
+  <section id="capex" class="sec-skyL tint">
+    <div class="secbar"></div>
+    <h2 class="accentL" id="capex_title">② 10개 매장 패키지 예산 (CAPEX) <span class="pill">Sky Light</span></h2>
+    
+    <div class="grid g-2">
+        <div class="card">
+            <div class="k">단위 점포 CAPEX</div>
+            <div class="v" id="capex_unit">₩43,949,360</div>
+            <div class="k">창업원가 (보증금 포함)</div>
+        </div>
+        <div class="card">
+            <div class="k">점포 합계</div>
+            <div class="v" id="capex_stores_total">₩439,493,600</div>
+            <div class="k" id="capex_stores_calc">10 × 43.9M</div>
+        </div>
+    </div>
+
+    <div class="lead" style="margin-top: 16px; font-size: 16px;">본사 및 거점 CAPEX</div>
+    <div class="grid g-3" style="margin-top: 8px;">
+        <div class="card">
+            <div class="k">본사(HQ) 구성비</div>
+            <div class="v" id="capex_hq_base">₩50,000,000</div>
+            <div class="k" id="capex_hq_desc">(총 8명 규모)</div>
+        </div>
+        <div class="card">
+            <div class="k">지역 거점 비용</div>
+            <div class="v" id="capex_regional_hubs">₩0</div>
+            <div class="k" id="capex_regional_desc">0개 지점 × ₩30M</div>
+        </div>
+        <div class="card">
+            <div class="k">인력별 세팅비</div>
+            <div class="v" id="capex_per_employee">₩24,000,000</div>
+            <div class="k" id="capex_employee_desc">8명 × ₩3M</div>
+        </div>
+    </div>
+    
+    <div class="grid g-2" style="margin-top:10px">
+      <div class="card"><div class="k">소계</div><div class="v" id="capex_subtotal">₩513,493,600</div></div>
+      <div class="card"><div class="k">컨틴전시(5%)</div><div class="v" id="capex_contingency">₩25,674,680</div></div>
+    </div>
+    <div class="card" style="margin-top:10px"><div class="k">패키지 CAPEX 합계</div><div class="v" id="capex_total">₩539,168,280</div><div class="k">부가세·운송·전기·덕트·소방 연동 별도</div></div>
+    <div class="note"><b>주석</b> — CAPEX: 초기 설비투자 / 컨틴전시: 예비비(5%) / <b>본사/거점 CAPEX 산출</b>: 본사 규모별 구성비 + (지역 거점 수 × 거점당 구성비) + (1인당 세팅비 × 총 인원 수)로 계산됩니다.</div>
+  </section>
+
+  <!-- OPEX -->
+  <section id="opex" class="sec-green tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">③ 월 OPEX (고정성) <span class="pill">Green</span></h2>
+    <table>
+      <thead><tr><th>항목(1점포)</th><th>가정</th><th>월 비용</th></tr></thead>
+      <tbody>
+        <tr id="opex_labor_row"><td>인건비(인상 시급 기준)</td><td id="opex_labor_desc">13h/일 × 30일 × 12,384원 × 1.2명</td><td id="opex_labor_cost">₩5,763,744</td></tr>
+        <tr id="opex_rent_row"><td>임대료(관리비포함/월)</td><td>고정</td><td id="opex_rent_cost">₩1,000,000</td></tr>
+        <tr id="opex_saas_row"><td>POS·인터넷(월)</td><td>고정</td><td id="opex_saas_cost">₩150,000</td></tr>
+        <tr id="opex_center_row"><td>센터 서비스(점포 몫)</td><td id="opex_center_desc">CS, 배달플랫폼 관리, 기술지원</td><td id="opex_center_cost">₩3,790,000</td></tr>
+        <tr><th>합계(1점포)</th><th></th><th id="opex_total">₩10,703,744</th></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>주석</b> — OPEX: 월 운영비 / FTE: Full‑Time Equivalent(상근 인력 환산)</div>
+  </section>
+
+  <!-- 단위 점포 손익표 (P&L) -->
+  <section id="pnl" class="sec-purple tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">④ 단위 점포 손익표(P&L, 월) <span class="pill">Purple</span></h2>
+
+    <div class="grid g-2">
+      <div class="card">
+        <div class="lead">입력(점포)</div>
+        <label>객단가 AOV(원) <input id="pl_aov" type="text" value="22,900" /></label>
+        <label>일 주문량(건/일) <input id="pl_units_day" type="text" value="80" /></label>
+        <label>원육 600g (단위 원가) <input id="pl_raw_meat" type="text" value="5,700" /></label>
+        <label>매장가공 (단위 원가) <input id="pl_proc_cost" type="text" value="700" /></label>
+        <label>포장 및 서비스메뉴 (단위 원가) <input id="pl_pkg_cost" type="text" value="1,500" /></label>
+        <label>사이드메뉴 원가비용 <input id="pl_service_cost" type="text" value="2,000" /></label>
+        <label>플랫폼 수수료(0~1) <input id="pl_pf" type="text" value="0.25" /></label>
+        <label>임대료(관리비포함/월) <input id="pl_rent" type="text" value="1,000,000" /></label>
+        <label>매출 대비 공과금·소모품 비율(0~1) <input id="pl_util_rate" type="text" value="0.04" /></label>
+        <label>POS·인터넷(월) <input id="pl_saas" type="text" value="150,000" /></label>
+      </div>
+      <div class="card">
+        <div class="lead">인건비 & 운영 기본 가정</div>
+        <label>근무시간(시간/일) <input id="pl_hours" type="text" value="13" /></label>
+        <label>기본 시급(원) <input id="pl_base_wage" type="text" value="10,320" /></label>
+        <label>책정 시급 (기본 × 1.2) <input id="pl_calc_wage" type="text" value="12,384" readonly /></label>
+        <label>월 일수 <input id="pl_days" type="text" value="30" /></label>
+        <div class="note" style="border:none; padding:0; margin-top: 8px;">모든 인건비 계산의 기초가 되는 값입니다.</div>
+        
+        <div class="lead" id="assumptions_level_title" style="margin-top: 16px;">물류 및 C레벨 가정</div>
+        <label>COGS 대비 3PL 비율(0~1) <input id="pl_3pl_rate" type="text" value="0.03" /></label>
+        
+        <div id="pl_b_savings_container">
+             <label>자동화 인력 절감율 (<span id="pl_b_level_label">C레벨</span>) <input id="pl_b_savings" type="text" value="0.15" /></label>
+        </div>
+        
+        <div id="pl_patrol_container">
+            <label>순회 관리 인력 1인당 담당 매장 수 (<span id="pl_patrol_stores_label">C레벨</span>) <input id="pl_patrol_stores" type="text" value="---" disabled/></label>
+            <label>순회 관리 인력 시급 승수 (<span id="pl_patrol_wage_label">C레벨</span>) <input id="pl_patrol_wage" type="text" value="---" disabled/></label>
+        </div>
+        
+        <div id="pl_washing_container">
+            <label>중앙 세척/소분 인력 1인당 담당 매장 수 (<span id="pl_washing_stores_label">C레벨</span>) <input id="pl_washing_stores" type="text" value="---" disabled/></label>
+            <label>중앙 세척/소분 인력 시급 승수 (<span id="pl_washing_wage_label">C레벨</span>) <input id="pl_washing_wage" type="text" value="---" disabled/></label>
+        </div>
+
+        <label>점포 CAPEX(회수기간 계산) <input id="pl_capex" type="text" value="43,949,360" readonly /></label>
+        
+        <div class="row" style="margin-top: 16px;"><button class="btn" id="apply_changes">입력값 최종 반영</button></div>
+      </div>
+    </div>
+
+    <div class="grid g-2" style="margin-top:10px">
+      <div class="card">
+        <div class="lead">손익 결과 요약</div>
+        <div class="kpiBar">
+          <span class="chip"><b>매출</b> <span id="pl_rev">-</span></span>
+          <span class="chip"><b>COGS</b> <span id="pl_cogs_ratio">-</span></span>
+          <span class="chip"><b>변동비</b> <span id="pl_var">-</span></span>
+          <span class="chip"><b>고정비</b> <span id="pl_fix">-</span></span>
+          <span class="chip"><b>EBITDA</b> <span id="pl_ebitda">-</span></span>
+          <span class="chip"><b>마진</b> <span id="pl_margin">-</span></span>
+          <span class="chip"><b>손익분기</b> <span id="pl_bep">-</span></span>
+          <span class="chip"><b>Payback</b> <span id="pl_pay">-</span></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="lead">비용 구조(도넛)</div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <canvas id="pl_donut" width="230" height="230"></canvas>
+          <div class="legend-rows" id="pl_legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <div class="lead">손익표 (월·1점포)</div>
+      <table>
+        <thead><tr><th>항목</th><th>금액(원)</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td>매출</td><td id="pl_t_rev">-</td><td class="k">AOV × 일 주문 × 30</td></tr>
+          <tr><td>매출원가(COGS)</td><td id="pl_t_cogs_abs">-</td><td id="pl_t_cogs_ratio" class="k">매출의 -%</td></tr>
+          <tr><td>플랫폼 수수료</td><td id="pl_t_pf">-</td><td class="k" id="pl_t_pf_desc">= 매출 × -%</td></tr>
+          <tr><td>공과금·소모품</td><td id="pl_t_util">-</td><td class="k" id="pl_t_util_desc">매출의 -% (변동성 반영)</td></tr>
+          <tr><td>3PL 배송료</td><td id="pl_t_3pl">-</td><td class="k" id="pl_t_3pl_desc">매출원가(COGS)의 -%</td></tr>
+          <tr><td>매출이익(기여이익)</td><td id="pl_t_cm">-</td><td class="k">매출 − 변동비</td></tr>
+          <tr><td>인건비</td><td id="pl_t_labor">-</td><td class="k" id="pl_t_labor_desc">13h/일 × 30일 × 12,384원 × 1.2명</td></tr>
+          <tr><td>임대료(관리비포함/월)</td><td id="pl_t_rent">-</td><td class="k">배달전문 소형</td></tr>
+          <tr><td>POS·인터넷(월)</td><td id="pl_t_saas">-</td><td class="k">POS·IOMS·모니터링</td></tr>
+          <tr><td>센터 서비스(점포 몫)</td><td id="pl_t_centerStore">-</td><td class="k" id="pl_t_centerStore_desc">세척·QA·순회</td></tr>
+          <tr><td>점포 EBITDA</td><td id="pl_t_ebitda">-</td><td class="k" id="pl_t_margin" class="k">마진 -%</td></tr>
+          <tr><td>손익분기점</td><td id="pl_t_bep">-</td><td class="k">일 기준(마리/일)</td></tr>
+          <tr><td>투자 회수기간</td><td id="pl_t_payback">-</td><td class="k">= CAPEX ÷ EBITDA</td></tr>
+        </tbody>
+      </table>
+      <div class="note"><b>주석</b> — <u>계산 구조</u>는 업로드 자료의 방식(= 기여이익 정의, 3PL은 매출원가(COGS)의 일정 비율 등)을 반영했습니다. 실제 계약·상권별로 값만 조정하시면 됩니다.</div>
+    </div>
+  </section>
+  
+  <!-- 총괄 손익표 -->
+  <section id="total-pnl" class="sec-purple tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">④-1 총괄 손익표 (Total P&L, 년) <span class="pill">Purple</span></h2>
+    <div class="card">
+        <div class="lead">패키지 결과 요약 (년)</div>
+        <div class="kpiBar">
+          <span class="chip"><b>총 매출</b> <span id="p_rev">-</span></span>
+          <span class="chip"><b>총 COGS</b> <span id="p_cogs_ratio">-</span></span>
+          <span class="chip"><b>총 변동비</b> <span id="p_var">-</span></span>
+          <span class="chip"><b>총 고정비</b> <span id="p_fix">-</span></span>
+          <span class="chip"><b>총 EBITDA</b> <span id="p_ebitda">-</span></span>
+          <span class="chip"><b>Payback</b> <span id="p_pay">-</span></span>
+        </div>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <div class="lead">총괄 손익표 (년)</div>
+      <table>
+        <thead><tr><th>항목</th><th>금액(원)</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td>총 매출</td><td id="p_t_rev">-</td><td class="k">단위점포 매출 × 총 매장 수 × 12개월</td></tr>
+          <tr><td>총 매출원가(COGS)</td><td id="p_t_cogs_abs">-</td><td id="p_t_cogs_ratio" class="k">총 매출의 -%</td></tr>
+          <tr><td>총 변동비 (COGS 제외)</td><td id="p_t_var_etc">-</td><td class="k">플랫폼, 공과금, 3PL</td></tr>
+          <tr><td>총 매출이익</td><td id="p_t_cm">-</td><td class="k">총 매출 − 총 변동비</td></tr>
+          <tr><td>총 고정비 (매장)</td><td id="p_t_fix_store">-</td><td class="k">(인건비, 임대료, SaaS) × 총 매장 수 × 12개월</td></tr>
+          <tr id="total_pnl_center_wage_row"><td>본사 및 지원 인건비 (HQ+거점)</td><td id="p_t_center_wage">-</td><td class="k">본사, CS, 기술지원, 지점장 등 인건비 × 12개월</td></tr>
+          <tr id="total_pnl_washing_wage_row" style="display: none;"><td>중앙 세척/소분 인건비(A레벨)</td><td id="p_t_washing_wage">-</td><td class="k">야간 근무, 월 인건비 × 12개월</td></tr>
+          <tr id="total_pnl_patrol_wage_row" style="display: none;"><td>순회 관리 인건비(B/A레벨)</td><td id="p_t_patrol_wage">-</td><td class="k">순회 인력, 월 인건비 × 12개월</td></tr>
+          <tr><td>총 EBITDA</td><td id="p_t_ebitda">-</td><td class="k" id="p_t_margin" class="k">마진 -%</td></tr>
+          <tr><td>총 투자 회수기간</td><td id="p_t_payback">-</td><td class="k">= 총 CAPEX ÷ 총 EBITDA</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 본사 손익표 -->
+  <section id="hq-pnl" class="sec-purple tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">④-2 본사 가맹 사업 손익표 (가정, 년) <span class="pill">Purple</span></h2>
+    <div class="card">
+        <label>본사 물류 마진율(0~1) <input id="hq_margin_rate" type="text" value="0.25" /></label>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <div class="lead">본사 손익표 (년)</div>
+      <table>
+        <thead><tr><th>항목</th><th>금액(원)</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td>총 공급가액 (전체 매장 COGS)</td><td id="hq_t_cogs">-</td><td class="k">전체 매장에 공급된 원부자재 총액</td></tr>
+          <tr><td>본사 물류 수익</td><td id="hq_t_revenue">-</td><td id="hq_t_revenue_desc" class="k">총 공급가액 × -%</td></tr>
+          <tr id="hq_pnl_center_wage_row"><td>본사 및 지원 인건비 (HQ+거점)</td><td id="hq_t_center_wage">-</td><td class="k">본사, CS, 기술지원, 지점장 등 인건비 × 12개월</td></tr>
+          <tr id="hq_pnl_washing_wage_row" style="display: none;"><td>중앙 세척/소분 인건비(A레벨)</td><td id="hq_t_washing_wage">-</td><td class="k">야간 근무, 월 인건비 × 12개월</td></tr>
+           <tr id="hq_pnl_patrol_wage_row" style="display: none;"><td>순회 관리 인건비(B/A레벨)</td><td id="hq_t_patrol_wage">-</td><td class="k">순회 인력, 월 인건비 × 12개월</td></tr>
+          <tr><td>본사 EBITDA</td><td id="hq_t_ebitda">-</td><td class="k">물류 수익 − 본사 인건비</td></tr>
+          <tr><td>본사 투자(센터) 회수기간</td><td id="hq_t_payback">-</td><td class="k">= 센터 CAPEX ÷ 본사 EBITDA</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- 시나리오 비교 -->
+  <section id="scenario" class="sec-purple tint">
+      <div class="secbar"></div>
+      <h2 class="accentL">⑥ 시나리오 비교 분석 <span class="pill">Purple</span></h2>
+      <div class="grid g-2">
+          <div class="card">
+              <div class="lead">현재 시뮬레이션 (단위 점포)</div>
+              <div class="kpiBar" id="s_current_kpis">
+                  <span class="chip"><b>매출</b> <span id="s_rev">-</span></span>
+                  <span class="chip"><b>COGS</b> <span id="s_cogs_ratio">-</span></span>
+                  <span class="chip"><b>변동비</b> <span id="s_var">-</span></span>
+                  <span class="chip"><b>고정비</b> <span id="s_fix">-</span></span>
+                  <span class="chip"><b>EBITDA</b> <span id="s_ebitda">-</span></span>
+                  <span class="chip"><b>마진</b> <span id="s_margin">-</span></span>
+                  <span class="chip"><b>Payback</b> <span id="s_pay">-</span></span>
+              </div>
+          </div>
+          <div class="card">
+              <div class="lead">고정 10C 시나리오 (단위 점포)</div>
+              <div class="kpiBar" id="s_fixed_kpis">
+                  <span class="chip"><b>매출</b> <span id="f_rev">-</span></span>
+                  <span class="chip"><b>COGS</b> <span id="f_cogs_ratio">-</span></span>
+                  <span class="chip"><b>변동비</b> <span id="f_var">-</span></span>
+                  <span class="chip"><b>고정비</b> <span id="f_fix">-</span></span>
+                  <span class="chip"><b>EBITDA</b> <span id="f_ebitda">-</span></span>
+                  <span class="chip"><b>마진</b> <span id="f_margin">-</span></span>
+                  <span class="chip"><b>Payback</b> <span id="f_pay">-</span></span>
+              </div>
+          </div>
+      </div>
+      <div class="note"><b>주석</b> — EBITDA: 이자·세금·감가상각 전 영업이익 / Payback: 초기투자 회수기간</div>
+  </section>
+  
+  <!-- 플로우 -->
+  <section id="flow" class="sec-indigo tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">⑤ 운영 플로우 <span class="pill">Indigo</span></h2>
+     <table>
+      <thead><tr><th>단계</th><th>핵심</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>주문 통합(IOMS)</td><td>배민/요기요/쿠팡이츠/네이버 자동접수</td><td class="k">중복·오입력 최소화</td></tr>
+        <tr><td>KDS</td><td>우선순위/약속시간 제어</td><td class="k">피크 타임 관리</td></tr>
+        <tr><td>2차 튀김(3')</td><td>OQS/ATO/자동필터</td><td class="k">품질·오일 수명 확보</td></tr>
+        <tr><td>양념</td><td>정량 디스펜서 + 짧은 토스</td><td class="k">일관성·위생</td></tr>
+        <tr><td>포장</td><td>반자동 테이핑/제함 보조</td><td class="k">속도 안정화</td></tr>
+        <tr><td>보온/픽업</td><td>보온장 + 디지털 선반</td><td class="k">B 단계에서 락커 전환</td></tr>
+        <tr><td>라이더 수령</td><td>무인 인도</td><td class="k">대기 최소화</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>주석</b> — IOMS: 주문 통합 / KDS: 주방 디스플레이 / OQS: Oil Quality Sensor / ATO: Auto Top‑Up</div>
+  </section>
+
+  <!-- 센터 -->
+  <section id="center" class="sec-teal tint">
+      <div class="secbar"></div>
+      <h2 class="accentL">⑦ 관제센터 역할 <span class="pill">Teal</span></h2>
+      <table>
+          <thead>
+              <tr>
+                  <th>역할 (Role)</th>
+                  <th>핵심 (Core Task)</th>
+                  <th>적용 레벨 (Applicable Level)</th>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                  <td><b>본사 (HQ)</b></td>
+                  <td colspan="2" class="k">Corporate Functions</td>
+              </tr>
+              <tr>
+                  <td>┣ 경영/기획</td>
+                  <td>전략, 재무, 법무, 마케팅 등</td>
+                  <td><span class="pill">C</span> <span class="pill">B</span> <span class="pill">A</span></td>
+              </tr>
+               <tr>
+                  <td>┣ CS (고객 서비스)</td>
+                  <td>전화/앱을 통한 주문·문의 통합 대응</td>
+                  <td><span class="pill">C</span> <span class="pill">B</span> <span class="pill">A</span></td>
+              </tr>
+              <tr>
+                  <td><b>원격 관제 (거점)</b></td>
+                  <td colspan="2" class="k">Remote Control & Monitoring</td>
+              </tr>
+              <tr>
+                  <td>┣ 주문 통합</td>
+                  <td>IOMS를 통한 주문 자동 접수 및 관리</td>
+                  <td><span class="pill">C</span> <span class="pill">B</span> <span class="pill">A</span></td>
+              </tr>
+               <tr>
+                  <td>┣ 기술 지원 (장비 A/S)</td>
+                  <td>자동화 장비 원격 진단, 현장 A/S 조율</td>
+                  <td><span class="pill">C</span> <span class="pill">B</span> <span class="pill">A</span></td>
+              </tr>
+              <tr>
+                  <td>┣ 배달 플랫폼 관리</td>
+                  <td>프로모션, 메뉴, 운영시간 등 플랫폼 관리</td>
+                  <td><span class="pill">C</span> <span class="pill">B</span> <span class="pill">A</span></td>
+              </tr>
+              <tr>
+                  <td>┣ CCTV 모니터링</td>
+                  <td>매장 안전, 위생, 운영상황 실시간 확인</td>
+                  <td><span class="pill">C</span> <span class="pill">B</span> <span class="pill">A</span></td>
+              </tr>
+              <tr>
+                  <td><b>중앙 지원 (거점)</b></td>
+                  <td colspan="2" class="k">Centralized Support & Logistics</td>
+              </tr>
+              <tr>
+                  <td>┣ 중앙 세척/소분</td>
+                  <td>원부자재의 중앙 집중식 전처리</td>
+                  <td><span class="pill" style="background:var(--amber); color:var(--bg)">A</span></td>
+              </tr>
+              <tr>
+                  <td>┣ 순회 관리</td>
+                  <td>담당 매장 순회하며 개점/폐점/보충 및 현장 소분/포장</td>
+                  <td><span class="pill" style="background:var(--rose); color:var(--bg)">B</span> <span class="pill" style="background:var(--amber); color:var(--bg)">A</span></td>
+              </tr>
+          </tbody>
+      </table>
+      <div class="note"><b>주석</b> — 관제센터의 역할은 자동화 레벨(A/B/C)에 따라 확장 및 변화합니다.</div>
+  </section>
+
+  <!-- 규정 -->
+  <section id="comp" class="sec-rose tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">⑧ 리스크 통제 & 컴플라이언스 <span class="pill">Rose</span></h2>
+     <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+      <div>
+          <b class="pill">위생 관리</b>
+          <p style="margin: 4px 0 0; font-size: 14px;">식품의약품안전처의 무인 매장 위생 지침을 철저히 준수합니다. 여기에는 식자재의 보관 온도, 조리 기구의 세척 주기, 유통기한 관리, 직원의 위생 교육 등이 포함됩니다.</p>
+      </div>
+      <div>
+          <b class="pill">안전 제일</b>
+          <p style="margin: 4px 0 0; font-size: 14px;">주방 식용유 화재에 특화된 K급 소화기를 비치하고, 화재 발생 시 가스와 전원을 자동으로 차단하는 주방자동소화장치를 설치합니다. 또한, 위험 상황 시 즉시 기계 작동을 멈추는 비상정지 시스템을 갖췄습니다.</p>
+      </div>
+      <div>
+          <b class="pill">일관된 품질</b>
+          <p style="margin: 4px 0 0; font-size: 14px;">모든 소스는 규격화된 파우치 형태로 공급하고, 정량 디스펜서를 사용해 언제나 동일한 양을 제공합니다. 이를 통해 전국 모든 매장에서 똑같은 맛과 품질을 유지합니다.</p>
+      </div>
+       <div>
+          <b class="pill">운영 투명성</b>
+          <p style="margin: 4px 0 0; font-size: 14px;">CCTV를 통해 원격으로 매장 상황을 실시간 관제하며, 매일 매장을 열고 닫을 때마다 정해진 체크리스트에 따라 점검하여 운영상의 실수를 최소화합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 로드맵 -->
+  <section id="roadmap" class="sec-amber tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">⑨ 단계적 고도화 로드맵 (A/B/C 명확화) <span class="pill">Amber</span></h2>
+    <div class="grid g-3">
+      <div class="card">
+        <div class="lead">Level C — 최소 인력</div>
+        <ul class="list" style="margin:8px 0 0 18px">
+          <li>상시 1.2인 (피크 대응)</li>
+          <li>프라이어 OQS/ATO/자동필터, 보온/픽업 선반, KDS</li>
+          <li id="roadmap_capex_c"><b>창업원가(보증금5백만원 포함): ₩43,949,360</b></li>
+          <li class="k">문제: 소스·세척 수작업, 피크 인력</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="lead">Level B — 부분 무인</div>
+        <ul class="list" style="margin:8px 0 0 18px">
+          <li>비피크 무인 / 순회 관리 도입</li>
+          <li>스마트 픽업 락커, 정량 소스 강화</li>
+          <li id="roadmap_capex_b"><b>창업원가(보증금5백만원 포함): ₩62,806,388</b></li>
+          <li class="k">문제: 락커 CAPEX·공간·온도 스펙 편차</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="lead">Level A — 영업시간 완전 무인</div>
+        <ul class="list" style="margin:8px 0 0 18px">
+          <li>영업시간 상주 0, 순회/중앙 관리</li>
+          <li>코봇 바스켓 핸들링 + 소스 자동 토스</li>
+          <li id="roadmap_capex_a"><b>창업원가(보증금5백만원 포함): ₩124,842,915</b></li>
+          <li class="k">문제: 초기 CAPEX·안전/세척 복잡성</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="lead">전환 게이트 & 추가 투자</div>
+      <table>
+        <thead><tr><th>구간</th><th>게이트(권장)</th><th>주요 추가설치</th><th>추가 CAPEX(점포)</th></tr></thead>
+        <tbody>
+          <tr><td>C → B</td><td>월주문 ≥ 3,000건, 약속시간 위반율 &lt; 5%, 위생·OQS 로그 무결점 4주</td><td>스마트 락커, 소스 헤드 증설</td><td>≈ 18,857,028</td></tr>
+          <tr><td>B → A</td><td>월주문 ≥ 5,000건, 2라인 필요, 반품율 &lt; 1.5%, 안전 무결점 8주</td><td>코봇 셀, 자동 토스 지그, 안전 인터락</td><td>≈ 62,036,527</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><b>주석</b> — 약속시간: 배달앱 인도 예정 시각 / 로그: 장비·위생 데이터 기록</div>
+  </section>
+
+  <!-- 의사결정 -->
+  <section id="decision" class="sec-slate tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">⑩ 임원 의사결정 체크리스트 <span class="pill">Slate</span></h2>
+    <table>
+        <thead>
+            <tr>
+                <th>항목</th>
+                <th>상세 내용</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><b>초기 투자 예산(CAPEX) 승인</b></td>
+                <td class="k">시뮬레이션에서 산출된 총 창업 비용(<span id="decision_capex">₩539,168,280</span>, 예비비 5% 포함)에 대한 최종 투자 승인을 의미합니다.</td>
+            </tr>
+            <tr>
+                <td><b>파일럿 매장 오픈 일정</b></td>
+                <td class="k">본격적인 확장에 앞서, 4주간 시험 운영(파일럿)을 진행하여 사업 모델의 실제 수익성과 운영 안정성을 검증합니다.</td>
+            </tr>
+            <tr>
+                <td><b>핵심 장비 공급사(벤더) 선정</b></td>
+                <td class="k">자동화 튀김기, KDS, 스마트 락커 등 핵심 설비 공급사에 견적을 요청(RFQ)하고, 공장 실사를 통해 최종 업체를 선정합니다.</td>
+            </tr>
+            <tr>
+                <td><b>센터 운영 범위 결정</b></td>
+                <td class="k">중앙 관제센터에서 수행할 핵심 업무(세척, 소스 제조, 순회 관리 등)를 본사에서 직접 운영할지, 전문 외주 업체에 맡길지 결정합니다.</td>
+            </tr>
+            <tr>
+                <td><b>핵심 성과 지표(KPI) 설정</b></td>
+                <td class="k">사업의 성공을 측정하기 위한 핵심 지표를 설정합니다. (예: 주문 처리 시간, 고객 만족도, 100건 주문당 투입 노동 시간 등)</td>
+            </tr>
+             <tr>
+                <td><b>자동화 전환 기준(게이트) 확정</b></td>
+                <td class="k">C레벨에서 B레벨로, B레벨에서 A레벨로 전환하기 위한 구체적인 조건(월 주문량, 고객 불만율 등)을 최종 확정합니다.</td>
+            </tr>
+        </tbody>
+    </table>
+  </section>
+
+  <div class="tag" style="display:block;text-align:center;margin-top:14px">© 2026 딱마리치킨 — 모든 수치는 <b>추정</b>이며 현장 조건·벤더 스펙에 따라 변동</div>
+</div>
+
+<!-- CAPEX Modal -->
+<div id="capex_modal" class="modal-backdrop">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal_title">Level C 상세 CAPEX</h3>
+            <button id="modal_close" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" id="modal_body">
+            <!-- Dynamic content will be injected here -->
+        </div>
+    </div>
+</div>
+
+<script type="module">
+  import { GoogleGenAI, Type } from "https://esm.run/@google/genai";
+
+  // --- CONFIGURATION ---
+  const dom = {
+    storeSlider: document.getElementById('store_slider'),
+    sliderValDisplay: document.getElementById('slider_val_display'),
+    aiParamsBtn: document.getElementById('ai_params'),
+    applyChangesBtn: document.getElementById('apply_changes'),
+    forceLevelButtons: {
+      auto: document.getElementById('force_level_auto'),
+      c: document.getElementById('force_level_c'),
+      b: document.getElementById('force_level_b'),
+      a: document.getElementById('force_level_a'),
+    },
+    // Summary
+    summaryStores: document.getElementById('summary_stores'),
+    summaryLevel: document.getElementById('summary_level'),
+    summaryCapex: document.getElementById('summary_capex'),
+    summaryLevelChip: document.getElementById('summary_level_chip'),
+    // Conclusion
+    conclusionProposal: document.getElementById('conclusion_proposal'),
+    conclusionStaff: document.getElementById('conclusion_staff'),
+    conclusionStaffNote: document.getElementById('conclusion_staff_note'),
+    // Capex
+    capexTitle: document.getElementById('capex_title'),
+    capexUnit: document.getElementById('capex_unit'),
+    capexStoresTotal: document.getElementById('capex_stores_total'),
+    capexStoresCalc: document.getElementById('capex_stores_calc'),
+    capexHqBase: document.getElementById('capex_hq_base'),
+    capexHqDesc: document.getElementById('capex_hq_desc'),
+    capexRegionalHubs: document.getElementById('capex_regional_hubs'),
+    capexRegionalDesc: document.getElementById('capex_regional_desc'),
+    capexPerEmployee: document.getElementById('capex_per_employee'),
+    capexEmployeeDesc: document.getElementById('capex_employee_desc'),
+    capexSubtotal: document.getElementById('capex_subtotal'),
+    capexContingency: document.getElementById('capex_contingency'),
+    capexTotal: document.getElementById('capex_total'),
+    // OPEX
+    opexLaborDesc: document.getElementById('opex_labor_desc'),
+    opexLaborCost: document.getElementById('opex_labor_cost'),
+    opexRentCost: document.getElementById('opex_rent_cost'),
+    opexSaasCost: document.getElementById('opex_saas_cost'),
+    opexCenterDesc: document.getElementById('opex_center_desc'),
+    opexCenterCost: document.getElementById('opex_center_cost'),
+    opexTotal: document.getElementById('opex_total'),
+    // P&L Inputs
+    pl: {
+      aov: document.getElementById('pl_aov'),
+      unitsDay: document.getElementById('pl_units_day'),
+      rawMeat: document.getElementById('pl_raw_meat'),
+      procCost: document.getElementById('pl_proc_cost'),
+      pkgCost: document.getElementById('pl_pkg_cost'),
+      serviceCost: document.getElementById('pl_service_cost'),
+      pf: document.getElementById('pl_pf'),
+      rent: document.getElementById('pl_rent'),
+      utilRate: document.getElementById('pl_util_rate'),
+      saas: document.getElementById('pl_saas'),
+      hours: document.getElementById('pl_hours'),
+      baseWage: document.getElementById('pl_base_wage'),
+      calcWage: document.getElementById('pl_calc_wage'),
+      days: document.getElementById('pl_days'),
+      capex: document.getElementById('pl_capex'),
+      threePlRate: document.getElementById('pl_3pl_rate'),
+      bSavings: document.getElementById('pl_b_savings'),
+      patrolStores: document.getElementById('pl_patrol_stores'),
+      patrolWage: document.getElementById('pl_patrol_wage'),
+      washingStores: document.getElementById('pl_washing_stores'),
+      washingWage: document.getElementById('pl_washing_wage'),
+    },
+    assumptions: {
+      levelTitle: document.getElementById('assumptions_level_title'),
+      bSavingsContainer: document.getElementById('pl_b_savings_container'),
+      patrolContainer: document.getElementById('pl_patrol_container'),
+      washingContainer: document.getElementById('pl_washing_container'),
+      bLevelLabel: document.getElementById('pl_b_level_label'),
+      patrolStoresLabel: document.getElementById('pl_patrol_stores_label'),
+      patrolWageLabel: document.getElementById('pl_patrol_wage_label'),
+      washingStoresLabel: document.getElementById('pl_washing_stores_label'),
+      washingWageLabel: document.getElementById('pl_washing_wage_label'),
+    },
+    // P&L KPI Bar
+    pl_kpi: {
+      rev: document.getElementById('pl_rev'),
+      cogsRatio: document.getElementById('pl_cogs_ratio'),
+      var: document.getElementById('pl_var'),
+      fix: document.getElementById('pl_fix'),
+      ebitda: document.getElementById('pl_ebitda'),
+      margin: document.getElementById('pl_margin'),
+      bep: document.getElementById('pl_bep'),
+      pay: document.getElementById('pl_pay')
+    },
+    // P&L Table
+    pl_t: {
+      rev: document.getElementById('pl_t_rev'),
+      cogsAbs: document.getElementById('pl_t_cogs_abs'),
+      cogsRatio: document.getElementById('pl_t_cogs_ratio'),
+      pf: document.getElementById('pl_t_pf'),
+      pfDesc: document.getElementById('pl_t_pf_desc'),
+      util: document.getElementById('pl_t_util'),
+      utilDesc: document.getElementById('pl_t_util_desc'),
+      threePl: document.getElementById('pl_t_3pl'),
+      threePlDesc: document.getElementById('pl_t_3pl_desc'),
+      cm: document.getElementById('pl_t_cm'),
+      labor: document.getElementById('pl_t_labor'),
+      laborDesc: document.getElementById('pl_t_labor_desc'),
+      rent: document.getElementById('pl_t_rent'),
+      saas: document.getElementById('pl_t_saas'),
+      centerStore: document.getElementById('pl_t_centerStore'),
+      centerStoreDesc: document.getElementById('pl_t_centerStore_desc'),
+      ebitda: document.getElementById('pl_t_ebitda'),
+      margin: document.getElementById('pl_t_margin'),
+      bep: document.getElementById('pl_t_bep'),
+      payback: document.getElementById('pl_t_payback')
+    },
+    // Donut
+    pl_donut: {
+      canvas: document.getElementById('pl_donut'),
+      legend: document.getElementById('pl_legend')
+    },
+    // Total P&L
+    total_pnl: {
+        rev: document.getElementById('p_rev'),
+        cogsRatio: document.getElementById('p_cogs_ratio'),
+        var: document.getElementById('p_var'),
+        fix: document.getElementById('p_fix'),
+        ebitda: document.getElementById('p_ebitda'),
+        pay: document.getElementById('p_pay'),
+        t_rev: document.getElementById('p_t_rev'),
+        t_cogs_abs: document.getElementById('p_t_cogs_abs'),
+        t_cogs_ratio: document.getElementById('p_t_cogs_ratio'),
+        t_var_etc: document.getElementById('p_t_var_etc'),
+        t_cm: document.getElementById('p_t_cm'),
+        t_fix_store: document.getElementById('p_t_fix_store'),
+        t_center_wage: document.getElementById('p_t_center_wage'),
+        t_washing_wage: document.getElementById('p_t_washing_wage'),
+        washing_wage_row: document.getElementById('total_pnl_washing_wage_row'),
+        t_patrol_wage: document.getElementById('p_t_patrol_wage'),
+        patrol_wage_row: document.getElementById('total_pnl_patrol_wage_row'),
+        t_ebitda: document.getElementById('p_t_ebitda'),
+        t_margin: document.getElementById('p_t_margin'),
+        t_payback: document.getElementById('p_t_payback'),
+    },
+    // HQ P&L
+    hq_pnl: {
+        marginRate: document.getElementById('hq_margin_rate'),
+        t_cogs: document.getElementById('hq_t_cogs'),
+        t_revenue: document.getElementById('hq_t_revenue'),
+        t_revenue_desc: document.getElementById('hq_t_revenue_desc'),
+        t_center_wage: document.getElementById('hq_t_center_wage'),
+        t_washing_wage: document.getElementById('hq_t_washing_wage'),
+        washing_wage_row: document.getElementById('hq_pnl_washing_wage_row'),
+        t_patrol_wage: document.getElementById('hq_t_patrol_wage'),
+        patrol_wage_row: document.getElementById('hq_pnl_patrol_wage_row'),
+        t_ebitda: document.getElementById('hq_t_ebitda'),
+        t_payback: document.getElementById('hq_t_payback'),
+    },
+    // Scenario Analysis
+    scenario: {
+        s_rev: document.getElementById('s_rev'),
+        s_cogs_ratio: document.getElementById('s_cogs_ratio'),
+        s_var: document.getElementById('s_var'),
+        s_fix: document.getElementById('s_fix'),
+        s_ebitda: document.getElementById('s_ebitda'),
+        s_margin: document.getElementById('s_margin'),
+        s_pay: document.getElementById('s_pay'),
+        f_rev: document.getElementById('f_rev'),
+        f_cogs_ratio: document.getElementById('f_cogs_ratio'),
+        f_var: document.getElementById('f_var'),
+        f_fix: document.getElementById('f_fix'),
+        f_ebitda: document.getElementById('f_ebitda'),
+        f_margin: document.getElementById('f_margin'),
+        f_pay: document.getElementById('f_pay'),
+    },
+    // Roadmap
+    roadmap: {
+      capex_c: document.getElementById('roadmap_capex_c'),
+      capex_b: document.getElementById('roadmap_capex_b'),
+      capex_a: document.getElementById('roadmap_capex_a'),
+    },
+    // Decision
+    decision: {
+      capex: document.getElementById('decision_capex'),
+    },
+    // Modal
+    modal: {
+        backdrop: document.getElementById('capex_modal'),
+        content: document.getElementById('modal_content'),
+        title: document.getElementById('modal_title'),
+        body: document.getElementById('modal_body'),
+        closeBtn: document.getElementById('modal_close'),
+    }
+  };
+
+  const STORES_PER_REGIONAL_CENTER = 100;
+  const REGIONAL_CENTER_BASE_CAPEX = 30000000;
+  const PER_EMPLOYEE_CAPEX = 3000000;
+
+  const hqCapexTiers = [
+      { threshold: 0, cost: 50000000 },   // < 50 staff
+      { threshold: 50, cost: 100000000 }, // 50-200 staff
+      { threshold: 200, cost: 300000000 } // > 200 staff
+  ];
+
+  const automationLevels = {
+      C: { threshold: 0, name: 'Level C', unitCapex: 43949360, baseFTE: 1.2 },
+      B: { threshold: 500, name: 'Level B', unitCapex: 62806388, baseFTE: 1.2 },
+      A: { threshold: 1000, name: 'Level A', unitCapex: 124842915, baseFTE: 0.0 }
+  };
+  
+  const capexDetails = {
+    C: {
+      title: "Level C 상세 CAPEX",
+      equipment: [
+        { item: "오토리프트 튀김기 26L × 4", cost: 12760000 },
+        { item: "자동 볶음기(소형) × 1", cost: 2050000 },
+        { item: "전 자동화 기계 × 3", cost: 4800000 },
+        { item: "오일 정제기(22L) × 1", cost: 790000 },
+        { item: "식용유 산패측정기 × 1", cost: 888800 },
+        { item: "6도어 냉동(65박스) × 1", cost: 2376000 },
+        { item: "4도어 냉장(45박스) × 1", cost: 1518000 },
+        { item: "업소용 식기세척기(도어형) × 1", cost: 2618360 },
+        { item: "스텐 작업대 1200(2단) × 1", cost: 129000 },
+        { item: "상부 선반 1200(2단) × 1", cost: 105600 },
+        { item: "2볼 싱크대 1500 × 1", cost: 265000 },
+        { item: "온장고/보온장 × 1", cost: 329000 },
+        { item: "오버헤드 워머(픽업 보온 보조) × 1", cost: 232600 },
+        { item: "24\" 모니터(KDS) × 2", cost: 238000 },
+        { item: "안드로이드 단말(4GB/32GB) × 2", cost: 69000 },
+        { item: "라벨 프린터 × 1", cost: 222000 },
+        { item: "CCTV 4ch NVR 키트 × 1", cost: 189000 },
+      ],
+      installation: [
+        { item: "후드·덕트·배기팬 제작/설치", cost: 3000000 },
+        { item: "전기 배선/전용회로(경미 증설 포함)", cost: 2200000 },
+        { item: "가스·온수·배수 연결/배관", cost: 1700000 },
+        { item: "주방 자동소화장치(후드 연동)", cost: 1500000 },
+        { item: "CCTV·KDS 네트워크 배선/세팅", cost: 500000 },
+        { item: "장비 반입·레벨링", cost: 400000 },
+      ]
+    },
+    B: {
+        title: "Level B 상세 CAPEX",
+        equipment: [
+            { item: "(Level C 전 장비 동일 포함)", cost: 29649360 },
+            { item: "스마트 픽업 락커 6칸(히팅) × 1", cost: 18238028 },
+            { item: "24\" 모니터(픽업 안내) × 1", cost: 119000 },
+        ],
+        installation: [
+            { item: "(Level C 설치 동일)", cost: 9300000 },
+            { item: "락커 고정/전용배선/부스 보강", cost: 500000 },
+        ]
+    },
+    A: {
+        title: "Level A 상세 CAPEX",
+        equipment: [
+            { item: "(Level B 전 장비 동일 포함)", cost: 48006388 },
+            { item: "협동로봇 5kg급(본체·컨트롤러) × 1", cost: 46611450 },
+            { item: "병용 그리퍼(2지) × 1", cost: 7533000 },
+            { item: "코봇 스탠드/워크스테이션 × 1", cost: 2617042 },
+            { item: "안전 펜스 모듈(출입 도어 포함) × 1", cost: 2200000 },
+            { item: "안전 릴레이 + 비상정지 스테이션(3EA) × 1세트", cost: 575035 },
+        ],
+        installation: [
+            { item: "(Level B 설치 동일)", cost: 9800000 },
+            { item: "코봇 셀 설치(기초·베이스 고정·티칭/시운전)", cost: 2000000 },
+            { item: "안전 펜스/인터락 시공", cost: 500000 },
+        ]
+    }
+  };
+
+  // --- STATE ---
+  let state = {
+    storeCount: 10,
+    currentLevel: 'C',
+    forcedLevel: null,
+    aiParams: {
+        cogsDiscountTiers: [
+            { threshold: 100, discount: 0.02 },
+            { threshold: 500, discount: 0.05 },
+            { threshold: 1000, discount: 0.08 }
+        ],
+        centerStaffSalaries: {
+            head: 6000000,
+            corporate: 4500000,
+            cs: 3500000,
+            techSupport: 4000000
+        }
+    }
+  };
+
+  // --- UTILITIES ---
+  function KRW(n, includeSymbol = true) {
+    if (isNaN(n) || n === null) return '-';
+    const symbol = includeSymbol ? '₩' : '';
+    return symbol + Math.round(n).toLocaleString('ko-KR');
+  }
+
+  function formatNumber(n) {
+      if (isNaN(n) || n === null) return '';
+      return n.toLocaleString('ko-KR');
+  }
+
+  function parseFormattedNumber(str) {
+      if (!str) return 0;
+      // Handle special case for "---"
+      if (typeof str === 'string' && str.trim() === '---') return 0;
+      return Number(String(str).replace(/,/g, ''));
+  }
+
+  function gv(elementId, isNumeric = true) {
+    const el = dom.pl[elementId] || document.getElementById(elementId);
+    if (!el) return isNumeric ? 0 : '';
+    return isNumeric ? parseFormattedNumber(el.value) : el.value;
+  }
+
+  // --- MAPPING & CALCULATION LOGIC ---
+  function mapSliderToStoreCount(sliderValue) {
+    const val = parseInt(sliderValue, 10);
+    if (val <= 100) { // 0-100 -> 10-100 (steps of 10)
+        return Math.round((10 + (val / 100) * 90) / 10) * 10;
+    } else if (val <= 300) { // 101-300 -> 100-1000 (steps of 50)
+        const progress = (val - 100) / 200;
+        return Math.round((100 + progress * 900) / 50) * 50;
+    } else { // 301-1000 -> 1000-20000 (steps of 100)
+        const progress = (val - 300) / 700;
+        const logMax = Math.log10(20000);
+        const logMin = Math.log10(1000);
+        const logValue = logMin + progress * (logMax - logMin);
+        const linearValue = Math.pow(10, logValue);
+        return Math.round(linearValue / 100) * 100;
+    }
+  }
+
+  function getAutomationLevel(count) {
+    if (state.forcedLevel) {
+        return state.forcedLevel;
+    }
+    if (count >= automationLevels.A.threshold) return 'A';
+    if (count >= automationLevels.B.threshold) return 'B';
+    return 'C';
+  }
+
+  function calculateCogsDiscount(storeCount) {
+    const tiers = state.aiParams.cogsDiscountTiers;
+    let discount = 0;
+    for (let i = tiers.length - 1; i >= 0; i--) {
+        if (storeCount >= tiers[i].threshold) {
+            discount = tiers[i].discount;
+            break;
+        }
+    }
+    return discount;
+  }
+
+  function calculateCorporateStaff(storeCount) {
+      const baseSupport = 5;
+      const incrementalSupport = Math.floor(storeCount / 50);
+      const support = baseSupport + incrementalSupport;
+
+      let cs = 0;
+      if (storeCount <= 100) {
+          cs = Math.ceil(storeCount / 10);
+      } else if (storeCount <= 500) {
+          cs = Math.ceil(100 / 10) + Math.ceil((storeCount - 100) / 20);
+      } else {
+          cs = Math.ceil(100 / 10) + Math.ceil(400 / 20) + Math.ceil((storeCount - 500) / 30);
+      }
+      return { support, cs, total: support + cs };
+  }
+  
+  function calculateRegionalStaff(storeCount) {
+      const regionalHubManagers = Math.floor(storeCount / STORES_PER_REGIONAL_CENTER);
+      const techSupport = Math.ceil(storeCount / 20);
+      return { regionalHubManagers, techSupport, total: regionalHubManagers + techSupport };
+  }
+  
+  function calculateAllStaff(storeCount, baseInputs, level) {
+    const corporate = calculateCorporateStaff(storeCount);
+    const regional = calculateRegionalStaff(storeCount);
+    const washing = calculateWashingLaborCost(storeCount, baseInputs, level);
+    const patrol = calculatePatrolLaborCost(storeCount, baseInputs, level);
+    
+    const hqDirector = 1;
+    const total = hqDirector + corporate.total + regional.total + washing.staffCount + patrol.staffCount;
+    
+    return {
+        hqDirector,
+        corporate,
+        regional,
+        washing,
+        patrol,
+        total,
+        regionalCount: regional.regionalHubManagers
+    };
+  }
+
+  function calculateTotalCentralWages(allStaffData) {
+      const salaries = state.aiParams.centerStaffSalaries;
+      const directorWage = allStaffData.hqDirector * salaries.head;
+      const corporateWages = (allStaffData.corporate.support * salaries.corporate) + (allStaffData.corporate.cs * salaries.cs);
+      const regionalWages = (allStaffData.regional.regionalHubManagers * salaries.head) + (allStaffData.regional.techSupport * salaries.techSupport);
+      
+      return {
+          hqWages: directorWage + corporateWages,
+          regionalWages: regionalWages,
+          total: directorWage + corporateWages + regionalWages
+      };
+  }
+  
+  function calculateTotalHqCapex(storeCount, totalStaff) {
+      let hqBase = 0;
+      for (let i = hqCapexTiers.length - 1; i >= 0; i--) {
+        if (totalStaff >= hqCapexTiers[i].threshold) {
+            hqBase = hqCapexTiers[i].cost;
+            break;
+        }
+      }
+      
+      const regionalCount = Math.floor(storeCount / STORES_PER_REGIONAL_CENTER);
+      const regionalTotal = regionalCount * REGIONAL_CENTER_BASE_CAPEX;
+      const perEmployeeTotal = totalStaff * PER_EMPLOYEE_CAPEX;
+      
+      const total = hqBase + regionalTotal + perEmployeeTotal;
+      
+      return { total, hqBase, regionalTotal, perEmployeeTotal, regionalCount };
+  }
+  
+  function calculateWashingLaborCost(storeCount, baseInputs, level) {
+      if (level !== 'A') return { totalCost: 0, staffCount: 0 };
+
+      const storesPerStaff = baseInputs.assumptions.washingStores > 0 ? baseInputs.assumptions.washingStores : 1;
+      const staffCount = Math.ceil(storeCount / storesPerStaff);
+      const wageMultiplier = baseInputs.assumptions.washingWage;
+      const wage = (baseInputs.fixed.baseWage * 1.2) * wageMultiplier;
+      const monthlyCost = staffCount * wage * baseInputs.fixed.hours * baseInputs.fixed.days;
+      
+      return { totalCost: monthlyCost, staffCount };
+  }
+
+  function calculatePatrolLaborCost(storeCount, baseInputs, level) {
+    if (level === 'C') return { totalCost: 0, staffCount: 0 };
+    
+    const calculatedWage = baseInputs.fixed.baseWage * 1.2;
+    let storesPerStaff, wageMultiplier, staffCount, wage, monthlyCost;
+    
+    // For Level B, patrol staff is now active.
+    if (level === 'B') {
+        storesPerStaff = baseInputs.assumptions.patrolStores > 0 ? baseInputs.assumptions.patrolStores : 1;
+        wageMultiplier = baseInputs.assumptions.patrolWage;
+    } else { // Level A
+        storesPerStaff = baseInputs.assumptions.patrolStores > 0 ? baseInputs.assumptions.patrolStores : 8; // Corrected default for A
+        wageMultiplier = baseInputs.assumptions.patrolWage;
+    }
+    
+    staffCount = Math.ceil(storeCount / storesPerStaff);
+    wage = calculatedWage * wageMultiplier;
+    monthlyCost = staffCount * wage * baseInputs.fixed.hours * baseInputs.fixed.days;
+
+    return { totalCost: monthlyCost, staffCount };
+  }
+
+
+  function calcPNL(storeCount, baseInputs) {
+    const level = getAutomationLevel(storeCount);
+    const levelInfo = automationLevels[level];
+
+    // Inputs
+    const { aov, unitsDay, rawMeat, procCost, pkgCost, serviceCost, pf, utilRate, threePlRate } = baseInputs.unit;
+    const { hours, baseWage, days, rent, saas, capex } = baseInputs.fixed;
+
+    // COGS with discount
+    const cogsDiscount = calculateCogsDiscount(storeCount);
+    const unitCogsBase = rawMeat + procCost + pkgCost + serviceCost;
+    const unitCogs = unitCogsBase * (1 - cogsDiscount);
+    
+    // Revenue & Variable Costs
+    const rev = aov * unitsDay * days;
+    const totalCogs = unitCogs * unitsDay * days;
+    const platform = rev * pf;
+    const utilities = rev * utilRate;
+    const threePl = totalCogs * threePlRate;
+    const variable = totalCogs + platform + utilities + threePl;
+
+    // Fixed Costs
+    const allStaff = calculateAllStaff(storeCount, baseInputs, level);
+    const centralWages = calculateTotalCentralWages(allStaff);
+    const washingLabor = allStaff.washing.totalCost;
+    const patrolLabor = allStaff.patrol.totalCost;
+    const totalCenterOpEx = centralWages.total + washingLabor + patrolLabor;
+    const centerAlloc = totalCenterOpEx / (storeCount > 0 ? storeCount : 1);
+
+    const calculatedWage = baseWage * 1.2;
+    let laborCost;
+    let laborDesc;
+
+    const baseLaborCalcString = `${hours}h/일 × ${days}일 × ${KRW(calculatedWage, false)}원`;
+
+    if (level === 'A') {
+        laborCost = 0;
+        laborDesc = `자동화로 인력 0 (순회 인력으로 대체)`;
+    } else if (level === 'B') {
+        const baseFTE = levelInfo.baseFTE;
+        const savingsRate = baseInputs.assumptions.bSavings;
+        laborCost = hours * calculatedWage * days * baseFTE * (1 - savingsRate);
+        laborDesc = `${baseLaborCalcString} × ${baseFTE}명 × 자동화 절감 ${(savingsRate * 100).toFixed(1)}%`;
+    } else { // Level C
+        const baseFTE = levelInfo.baseFTE;
+        laborCost = hours * calculatedWage * days * baseFTE;
+        laborDesc = `${baseLaborCalcString} × ${baseFTE}명`;
+    }
+    
+    const totalFixed = laborCost + rent + saas + centerAlloc;
+    
+    // Results
+    const ebitda = rev - variable - totalFixed;
+    const margin = rev > 0 ? (ebitda / rev) : 0;
+    
+    const varCostPerUnit = variable / (unitsDay * days);
+    const cmPerUnit = aov - varCostPerUnit;
+    const bepUnitsTotal = cmPerUnit > 0 ? (totalFixed / cmPerUnit) : NaN;
+    const bepDailyUnits = bepUnitsTotal / days;
+    
+    const payMonths = ebitda > 0 ? (capex / ebitda) : NaN;
+
+    return {
+      rev, totalCogs, variable, totalFixed, ebitda, margin, bepDailyUnits, payMonths,
+      unitCogs, platform, utilities, threePl, laborCost, rent, saas, centerAlloc,
+      calculatedWage, laborDesc, cogsDiscount, allStaff, centralWages, washingLabor, patrolLabor
+    };
+  }
+
+  function calculateFixed10CScenario() {
+      const baseInputs = {
+          unit: { aov: 22900, unitsDay: 80, rawMeat: 5700, procCost: 700, pkgCost: 1500, serviceCost: 2000, pf: 0.25, utilRate: 0.04, threePlRate: 0.03 },
+          fixed: { hours: 13, baseWage: 10320, days: 30, rent: 1000000, saas: 150000, capex: automationLevels.C.unitCapex },
+          assumptions: { bSavings: 0.15, patrolStores: 20, patrolWage: 1.1, washingStores: 5, washingWage: 1.5 }
+      };
+      // In 10C scenario, level is always C, so patrol/washing is 0
+      const pnl = calcPNL(10, baseInputs);
+      // Manually override patrol/washing for fixed scenario if needed, but calcPNL handles it.
+      return pnl;
+  }
+
+  // --- UI UPDATE FUNCTIONS ---
+  function updateAllUI() {
+    const storeCount = state.storeCount;
+    const level = getAutomationLevel(storeCount);
+    state.currentLevel = level;
+
+    // First, update the state of the assumption inputs UI based on the level
+    updateAssumptionsUI(level);
+
+    // Now, get all base inputs from DOM, which will have the correct values
+    const baseInputs = {
+        unit: { aov: gv('aov'), unitsDay: gv('unitsDay'), rawMeat: gv('rawMeat'), procCost: gv('procCost'), pkgCost: gv('pkgCost'), serviceCost: gv('serviceCost'), pf: gv('pf'), utilRate: gv('utilRate'), threePlRate: gv('threePlRate') },
+        fixed: { hours: gv('hours'), baseWage: gv('baseWage'), days: gv('days'), rent: gv('rent'), saas: gv('saas'), capex: parseFormattedNumber(dom.pl.capex.value) },
+        assumptions: { 
+            bSavings: gv('bSavings'), 
+            patrolStores: gv('patrolStores'), 
+            patrolWage: gv('patrolWage'),
+            washingStores: gv('washingStores'),
+            washingWage: gv('washingWage')
+        }
+    };
+    
+    const pnlResults = calcPNL(storeCount, baseInputs);
+    const allStaff = pnlResults.allStaff;
+    
+    updateSummaryUI(storeCount, level);
+    updateConclusionUI(storeCount, level, allStaff);
+    updateCapexUI(storeCount, level, allStaff);
+    updateOpexUI(pnlResults, level);
+    updatePnlUI(pnlResults, baseInputs);
+    updateTotalPackageResults(storeCount, level, pnlResults);
+    updateScenarioAnalysisUI(pnlResults);
+    updateDecisionUI();
+    updateForceLevelButtons();
+  }
+
+  function updateSummaryUI(storeCount, level) {
+    dom.summaryStores.textContent = formatNumber(storeCount);
+    dom.summaryLevel.textContent = automationLevels[level].name;
+    dom.summaryCapex.textContent = KRW(automationLevels[level].unitCapex);
+    dom.sliderValDisplay.textContent = formatNumber(storeCount);
+  }
+  
+  function updateConclusionUI(storeCount, level, allStaff) {
+      dom.conclusionProposal.innerHTML = `${formatNumber(storeCount)}개 <span style="color:var(--sky)">${automationLevels[level].name}</span>`;
+      dom.conclusionStaff.textContent = `본사/거점 총원: ${allStaff.total}명`;
+
+      let avgPerHub = 0;
+      if (allStaff.regionalCount > 0) {
+          const hubStaff = allStaff.regional.total + allStaff.patrol.staffCount + allStaff.washing.staffCount;
+          avgPerHub = hubStaff / allStaff.regionalCount;
+      }
+      
+      const breakdown = `총원 ${allStaff.total}명 구성: 본사 ${allStaff.corporate.total + allStaff.hqDirector}명(센터장 ${allStaff.hqDirector}, 지원 ${allStaff.corporate.support}, CS ${allStaff.corporate.cs}), 지점장 ${allStaff.regional.regionalHubManagers}명, 기술지원 ${allStaff.regional.techSupport}명, 중앙 세척/소분 ${allStaff.washing.staffCount}명 (A레벨), 순회 관리 ${allStaff.patrol.staffCount}명 (B/A레벨). ${allStaff.regionalCount > 0 ? `지역 거점당 평균 ${avgPerHub.toFixed(1)}명 배치.` : ''}`;
+      dom.conclusionStaffNote.innerHTML = `<b>주석</b> — ${breakdown.replace(/\s+/g, ' ').trim()}`;
+  }
+
+
+  function updateCapexUI(storeCount, level, allStaff) {
+      const levelInfo = automationLevels[level];
+      const hqCapex = calculateTotalHqCapex(storeCount, allStaff.total);
+
+      const storesTotal = levelInfo.unitCapex * storeCount;
+      const subtotal = storesTotal + hqCapex.total;
+      const contingency = subtotal * 0.05;
+      const totalCapex = subtotal + contingency;
+
+      dom.capexTitle.textContent = `② ${formatNumber(storeCount)}개 매장 패키지 예산 (CAPEX)`;
+      dom.capexUnit.textContent = KRW(levelInfo.unitCapex);
+      dom.capexStoresTotal.textContent = KRW(storesTotal);
+      dom.capexStoresCalc.textContent = `${formatNumber(storeCount)} × ${KRW(levelInfo.unitCapex, false)}`;
+      
+      dom.capexHqBase.textContent = KRW(hqCapex.hqBase);
+      dom.capexHqDesc.textContent = `(총 ${allStaff.total}명 규모)`;
+      dom.capexRegionalHubs.textContent = KRW(hqCapex.regionalTotal);
+      dom.capexRegionalDesc.textContent = `${hqCapex.regionalCount}개 지점 × ${KRW(REGIONAL_CENTER_BASE_CAPEX, false)}`;
+      dom.capexPerEmployee.textContent = KRW(hqCapex.perEmployeeTotal);
+      dom.capexEmployeeDesc.textContent = `${allStaff.total}명 × ${KRW(PER_EMPLOYEE_CAPEX, false)}`;
+      
+      dom.capexSubtotal.textContent = KRW(subtotal);
+      dom.capexContingency.textContent = KRW(contingency);
+      dom.capexTotal.textContent = KRW(totalCapex);
+
+      dom.pl.capex.value = formatNumber(levelInfo.unitCapex);
+  }
+
+  function updateOpexUI(pnl, level) {
+      dom.opexLaborDesc.textContent = pnl.laborDesc;
+      dom.opexLaborCost.textContent = KRW(pnl.laborCost);
+      dom.opexRentCost.textContent = KRW(gv('rent'));
+      dom.opexSaasCost.textContent = KRW(gv('saas'));
+      dom.opexCenterCost.textContent = KRW(pnl.centerAlloc);
+      let centerDescText = (level === 'A') ? `CS, 배달플랫폼 관리, 기술지원, 세척·살균·소분` : `CS, 배달플랫폼 관리, 기술지원`;
+      dom.opexCenterDesc.textContent = centerDescText;
+      dom.opexTotal.textContent = KRW(pnl.laborCost + gv('rent') + gv('saas') + pnl.centerAlloc);
+  }
+  
+  function updateAssumptionsUI(level) {
+      dom.assumptions.levelTitle.textContent = `물류 및 ${level}레벨 가정`;
+      const baseWage = gv('baseWage');
+      const calculatedWage = baseWage * 1.2;
+      dom.pl.calcWage.value = formatNumber(Math.round(calculatedWage));
+
+      // B-Level Savings
+      if (level === 'B') {
+          dom.assumptions.bSavingsContainer.style.display = 'block';
+          dom.pl.bSavings.disabled = false;
+      } else {
+          dom.assumptions.bSavingsContainer.style.display = 'none';
+          dom.pl.bSavings.disabled = true;
+      }
+
+      // Patrol Staff (B & A)
+      dom.assumptions.patrolStoresLabel.textContent = `${level}레벨`;
+      dom.assumptions.patrolWageLabel.textContent = `${level}레벨`;
+      if (level === 'B' || level === 'A') {
+          if (dom.pl.patrolStores.value === '---' || dom.pl.patrolStores.disabled) dom.pl.patrolStores.value = (level === 'B' ? '20' : '8');
+          dom.pl.patrolStores.disabled = false;
+          
+          if (dom.pl.patrolWage.value === '---' || dom.pl.patrolWage.disabled) dom.pl.patrolWage.value = (level === 'B' ? '1.1' : '1.2');
+          dom.pl.patrolWage.disabled = false;
+      } else {
+          dom.pl.patrolStores.value = '---';
+          dom.pl.patrolStores.disabled = true;
+          dom.pl.patrolWage.value = '---';
+          dom.pl.patrolWage.disabled = true;
+      }
+
+      // Washing Staff (A only)
+      dom.assumptions.washingStoresLabel.textContent = `${level}레벨`;
+      dom.assumptions.washingWageLabel.textContent = `${level}레벨`;
+      if (level === 'A') {
+          if (dom.pl.washingStores.value === '---' || dom.pl.washingStores.disabled) dom.pl.washingStores.value = '5';
+          dom.pl.washingStores.disabled = false;
+          
+          if (dom.pl.washingWage.value === '---' || dom.pl.washingWage.disabled) dom.pl.washingWage.value = '1.5';
+          dom.pl.washingWage.disabled = false;
+      } else {
+          dom.pl.washingStores.value = '---';
+          dom.pl.washingStores.disabled = true;
+          dom.pl.washingWage.value = '---';
+          dom.pl.washingWage.disabled = true;
+      }
+  }
+
+
+  function updatePnlUI(pnl, inputs) {
+    // KPI Bar
+    dom.pl_kpi.rev.textContent = KRW(pnl.rev);
+    const cogsRatioText = pnl.rev > 0 ? `${(pnl.totalCogs / pnl.rev * 100).toFixed(1)}%` : '-';
+    dom.pl_kpi.cogsRatio.textContent = cogsRatioText;
+    dom.pl_kpi.var.textContent = KRW(pnl.variable);
+    dom.pl_kpi.fix.textContent = KRW(pnl.totalFixed);
+    dom.pl_kpi.ebitda.textContent = KRW(pnl.ebitda);
+    dom.pl_kpi.margin.textContent = `${(pnl.margin * 100).toFixed(1)}%`;
+    dom.pl_kpi.bep.textContent = isNaN(pnl.bepDailyUnits) ? 'N/A' : `${pnl.bepDailyUnits.toFixed(1)} 건/일`;
+    dom.pl_kpi.pay.textContent = isNaN(pnl.payMonths) ? 'N/A' : `${pnl.payMonths.toFixed(1)} 개월`;
+
+    // P&L Table
+    dom.pl_t.rev.textContent = KRW(pnl.rev);
+    dom.pl_t.cogsAbs.textContent = KRW(pnl.totalCogs);
+    dom.pl_t.cogsRatio.textContent = `매출의 ${cogsRatioText}`;
+    dom.pl_t.pf.textContent = KRW(pnl.platform);
+    dom.pl_t.pfDesc.textContent = `= 매출 × ${(inputs.unit.pf * 100).toFixed(1)}%`;
+    dom.pl_t.util.textContent = KRW(pnl.utilities);
+    dom.pl_t.utilDesc.textContent = `매출의 ${(inputs.unit.utilRate * 100).toFixed(1)}% (변동성 반영)`;
+    dom.pl_t.threePl.textContent = KRW(pnl.threePl);
+    dom.pl_t.threePlDesc.textContent = `매출원가(COGS)의 ${(inputs.unit.threePlRate * 100).toFixed(1)}%`;
+    dom.pl_t.cm.textContent = KRW(pnl.rev - pnl.variable);
+    dom.pl_t.labor.textContent = KRW(pnl.laborCost);
+    dom.pl_t.laborDesc.textContent = pnl.laborDesc;
+    dom.pl_t.rent.textContent = KRW(pnl.rent);
+    dom.pl_t.saas.textContent = KRW(pnl.saas);
+    dom.pl_t.centerStore.textContent = KRW(pnl.centerAlloc);
+    dom.pl_t.centerStoreDesc.textContent = dom.opexCenterDesc.textContent;
+    dom.pl_t.ebitda.textContent = KRW(pnl.ebitda);
+    dom.pl_t.margin.textContent = `마진 ${(pnl.margin * 100).toFixed(1)}%`;
+    dom.pl_t.bep.textContent = isNaN(pnl.bepDailyUnits) ? 'N/A' : `${pnl.bepDailyUnits.toFixed(1)} 건/일`;
+    dom.pl_t.payback.textContent = isNaN(pnl.payMonths) ? 'N/A' : `${pnl.payMonths.toFixed(1)} 개월`;
+
+    // Donut Chart
+    drawDonut(pnl);
+  }
+  
+  function drawDonut(pnl) {
+    const parts = [
+      {k:'매출원가', v:pnl.totalCogs, c:'#6366f1'},
+      {k:'플랫폼', v:pnl.platform, c:'#06b6d4'},
+      {k:'인건비', v:pnl.laborCost, c:'#22c55e'},
+      {k:'임대료', v:pnl.rent, c:'#f59e0b'},
+      {k:'공과금 등', v:pnl.utilities, c:'#eab308'}, 
+      {k:'POS/인터넷', v:pnl.saas, c:'#94a3b8'},
+      {k:'센터서비스', v:pnl.centerAlloc, c:'#f97316'},
+      {k:'3PL', v:pnl.threePl, c:'#14b8a6'},
+      {k:'EBITDA', v:Math.max(pnl.ebitda,0), c:'#3b82f6'}
+    ];
+    const canvas = dom.pl_donut.canvas; const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height);
+    const w=canvas.width,h=canvas.height,r=Math.min(w,h)/2 - 6,cx=w/2,cy=h/2; let start=-Math.PI/2; const total=parts.reduce((a,b)=>a+b.v,0);
+    if (total === 0 || isNaN(total)) return;
+    parts.forEach(p=>{const ang=(p.v/total)*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,start+ang);ctx.closePath();ctx.fillStyle=p.c;ctx.fill();start+=ang;});
+    ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.arc(cx,cy,r*0.60,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation='source-over';
+    ctx.fillStyle='#cbd5e1';ctx.font='bold 14px system-ui';ctx.textAlign='center';ctx.fillText('비용 구조(%)',cx,cy-4);ctx.font='12px system-ui';ctx.fillText('월 기준, 1점포',cx,cy+14);
+
+    const lr = dom.pl_donut.legend; lr.innerHTML='';
+    parts.forEach(p=>{
+      const l=document.createElement('div');
+      const ratio = pnl.rev > 0 ? (p.v / pnl.rev * 100) : 0;
+      l.innerHTML=`<span class="dot" style="background:${p.c}"></span> ${p.k} ${isNaN(ratio)?'0.0':ratio.toFixed(1)}%`;
+      const rdiv=document.createElement('div'); rdiv.style.textAlign='right'; rdiv.textContent=KRW(p.v);
+      lr.appendChild(l); lr.appendChild(rdiv);
+    });
+  }
+
+  function updateTotalPackageResults(storeCount, level, pnl) {
+    const annualMultiplier = 12;
+    const totalRev = pnl.rev * storeCount * annualMultiplier;
+    const totalCogs = pnl.totalCogs * storeCount * annualMultiplier;
+    const totalVar = pnl.variable * storeCount * annualMultiplier;
+    const totalStoreFixed = (pnl.laborCost + pnl.rent + pnl.saas) * storeCount * annualMultiplier;
+
+    const centralSupportWages = pnl.centralWages.total * annualMultiplier;
+    const washingLabor = pnl.washingLabor * annualMultiplier;
+    const patrolLabor = pnl.patrolLabor * annualMultiplier;
+    
+    // Total EBITDA for the entire package is Revenue minus all costs
+    const totalEbitda = totalRev - totalVar - totalStoreFixed - centralSupportWages - washingLabor - patrolLabor;
+    
+    const hqCapex = calculateTotalHqCapex(storeCount, pnl.allStaff.total);
+    const storesTotalCapex = automationLevels[level].unitCapex * storeCount;
+    const totalCapex = (storesTotalCapex + hqCapex.total) * 1.05;
+    
+    const paybackYears = totalEbitda > 0 ? (totalCapex / totalEbitda) : NaN;
+
+    // KPI Bar
+    dom.total_pnl.rev.textContent = KRW(totalRev);
+    dom.total_pnl.cogsRatio.textContent = totalRev > 0 ? `${(totalCogs / totalRev * 100).toFixed(1)}%` : '-';
+    dom.total_pnl.var.textContent = KRW(totalVar);
+    // Total Fixed cost is store fixed costs + ALL central labor costs
+    const totalCentralLabor = centralSupportWages + washingLabor + patrolLabor;
+    dom.total_pnl.fix.textContent = KRW(totalStoreFixed + totalCentralLabor);
+    dom.total_pnl.ebitda.textContent = KRW(totalEbitda);
+    dom.total_pnl.pay.textContent = isNaN(paybackYears) ? 'N/A' : `${paybackYears.toFixed(1)} 년`;
+
+    // Table
+    dom.total_pnl.t_rev.textContent = KRW(totalRev);
+    dom.total_pnl.t_cogs_abs.textContent = KRW(totalCogs);
+    dom.total_pnl.t_cogs_ratio.textContent = `총 매출의 ${dom.total_pnl.cogsRatio.textContent}`;
+    dom.total_pnl.t_var_etc.textContent = KRW(totalVar - totalCogs);
+    dom.total_pnl.t_cm.textContent = KRW(totalRev - totalVar);
+    dom.total_pnl.t_fix_store.textContent = KRW(totalStoreFixed);
+    
+    dom.total_pnl.t_center_wage.textContent = KRW(centralSupportWages);
+    
+    dom.total_pnl.washing_wage_row.style.display = (level === 'A') ? 'table-row' : 'none';
+    dom.total_pnl.t_washing_wage.textContent = KRW(washingLabor);
+    
+    dom.total_pnl.patrol_wage_row.style.display = (level === 'C') ? 'none' : 'table-row';
+    dom.total_pnl.t_patrol_wage.textContent = KRW(patrolLabor);
+    
+    dom.total_pnl.t_ebitda.textContent = KRW(totalEbitda);
+    const totalMargin = totalRev > 0 ? (totalEbitda / totalRev * 100).toFixed(1) : '0.0';
+    dom.total_pnl.t_margin.textContent = `마진 ${totalMargin}%`;
+    dom.total_pnl.t_payback.textContent = isNaN(paybackYears) ? 'N/A' : `${paybackYears.toFixed(1)} 년`;
+
+    // Update HQ P&L at the same time
+    calcHqPnl(level, totalCogs, centralSupportWages, washingLabor, patrolLabor, hqCapex.total);
+  }
+
+  function calcHqPnl(level, totalAnnualCogs, centralSupportWages, washingLabor, patrolLabor, centerCapex) {
+    const marginRate = parseFormattedNumber(dom.hq_pnl.marginRate.value);
+    const hqRevenue = totalAnnualCogs * marginRate;
+
+    // HQ Costs are ONLY central costs, not store costs
+    const hqCosts = centralSupportWages + washingLabor + patrolLabor;
+    const hqEbitda = hqRevenue - hqCosts;
+    const hqPayback = hqEbitda > 0 ? (centerCapex * 1.05 / hqEbitda) : NaN;
+
+    dom.hq_pnl.t_cogs.textContent = KRW(totalAnnualCogs);
+    dom.hq_pnl.t_revenue.textContent = KRW(hqRevenue);
+    dom.hq_pnl.t_revenue_desc.textContent = `총 공급가액 × ${(marginRate * 100).toFixed(1)}%`;
+    dom.hq_pnl.t_center_wage.textContent = KRW(centralSupportWages);
+
+    dom.hq_pnl.washing_wage_row.style.display = (level === 'A') ? 'table-row' : 'none';
+    dom.hq_pnl.t_washing_wage.textContent = KRW(washingLabor);
+
+    dom.hq_pnl.patrol_wage_row.style.display = (level === 'C') ? 'none' : 'table-row';
+    dom.hq_pnl.t_patrol_wage.textContent = KRW(patrolLabor);
+
+    dom.hq_pnl.t_ebitda.textContent = KRW(hqEbitda);
+    dom.hq_pnl.t_payback.textContent = isNaN(hqPayback) ? 'N/A' : `${hqPayback.toFixed(1)} 년`;
+  }
+  
+  function updateScenarioAnalysisUI(currentPnl) {
+      const fixedPnl = calculateFixed10CScenario();
+      const scenarios = { s: currentPnl, f: fixedPnl };
+      for (const [prefix, pnl] of Object.entries(scenarios)) {
+          dom.scenario[`${prefix}_rev`].textContent = KRW(pnl.rev);
+          dom.scenario[`${prefix}_cogs_ratio`].textContent = pnl.rev > 0 ? `${(pnl.totalCogs / pnl.rev * 100).toFixed(1)}%` : '-';
+          dom.scenario[`${prefix}_var`].textContent = KRW(pnl.variable);
+          dom.scenario[`${prefix}_fix`].textContent = KRW(pnl.totalFixed);
+          dom.scenario[`${prefix}_ebitda`].textContent = KRW(pnl.ebitda);
+          dom.scenario[`${prefix}_margin`].textContent = `${(pnl.margin * 100).toFixed(1)}%`;
+          dom.scenario[`${prefix}_pay`].textContent = isNaN(pnl.payMonths) ? 'N/A' : `${pnl.payMonths.toFixed(1)} 개월`;
+      }
+  }
+  
+  function updateDecisionUI() {
+      dom.decision.capex.textContent = dom.capexTotal.textContent;
+  }
+  
+  function updateForceLevelButtons() {
+    Object.values(dom.forceLevelButtons).forEach(btn => btn.classList.remove('active'));
+    const level = state.forcedLevel;
+    if (level === 'C') dom.forceLevelButtons.c.classList.add('active');
+    else if (level === 'B') dom.forceLevelButtons.b.classList.add('active');
+    else if (level === 'A') dom.forceLevelButtons.a.classList.add('active');
+    else dom.forceLevelButtons.auto.classList.add('active');
+  }
+
+  function showCapexModal(level) {
+    const details = capexDetails[level];
+    if (!details) return;
+
+    dom.modal.title.textContent = details.title;
+    
+    let html = '<h4>장비 내역</h4><ul>';
+    let equipmentTotal = 0;
+    details.equipment.forEach(e => {
+        html += `<li>${e.item}: ${KRW(e.cost)}</li>`;
+        equipmentTotal += e.cost;
+    });
+    html += `<li class="total-row">장비 합계: ${KRW(equipmentTotal)}</li></ul>`;
+    
+    html += '<h4>설치/공사 내역</h4><ul>';
+    let installTotal = 0;
+    details.installation.forEach(i => {
+        html += `<li>${i.item}: ${KRW(i.cost)}</li>`;
+        installTotal += i.cost;
+    });
+    html += `<li class="total-row">설치 합계: ${KRW(installTotal)}</li></ul>`;
+    
+    const total = equipmentTotal + installTotal;
+    const totalWithDeposit = total + 5000000;
+    html += `<div class="total-row" style="font-size: 16px; text-align: right; margin-top: 20px;">총합(설치 포함): ${KRW(total)}<br>보증금 포함 초기투입: ${KRW(totalWithDeposit)}</div>`;
+
+    dom.modal.body.innerHTML = html;
+    dom.modal.backdrop.style.display = 'block';
+  }
+
+  function hideCapexModal() {
+      dom.modal.backdrop.style.display = 'none';
+  }
+
+  async function fetchAiParameters() {
+    dom.aiParamsBtn.disabled = true;
+    dom.aiParamsBtn.textContent = '🤖 AI 파라미터 적용 중...';
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        const prompt = `
+            You are an expert financial analyst for franchise business models in South Korea.
+            Provide realistic estimates for:
+            1. COGS (Cost of Goods Sold) discount rates based on the bulk purchasing power of a franchise network.
+            2. Average monthly salaries in KRW for key roles in a central support and corporate office structure.
+
+            Provide the output as a single, valid JSON object with the specified structure. Do not include any other text or markdown formatting.
+        `;
+
+        const schema = {
+          type: Type.OBJECT,
+          properties: {
+            cogsDiscountTiers: {
+              type: Type.ARRAY,
+              description: "Discount tiers based on number of stores.",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  threshold: { type: Type.NUMBER, description: "Number of stores to trigger discount." },
+                  discount: { type: Type.NUMBER, description: "Discount rate as a decimal (e.g., 0.02 for 2%)." }
+                },
+                required: ["threshold", "discount"]
+              }
+            },
+            centerStaffSalaries: {
+              type: Type.OBJECT,
+              description: "Average monthly salaries in KRW.",
+              properties: {
+                head: { type: Type.NUMBER, description: "Salary for an HQ Director or Regional Hub Manager." },
+                corporate: { type: Type.NUMBER, description: "Salary for a corporate office worker (finance, legal, etc.)." },
+                cs: { type: Type.NUMBER, description: "Salary for a Customer Service representative." },
+                techSupport: { type: Type.NUMBER, description: "Salary for a technical support/equipment maintenance specialist." }
+              },
+              required: ["head", "corporate", "cs", "techSupport"]
+            }
+          },
+          required: ["cogsDiscountTiers", "centerStaffSalaries"]
+        };
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: schema
+          }
+        });
+        
+        const aiData = JSON.parse(response.text);
+        
+        // Validate and update state
+        if (aiData.cogsDiscountTiers && aiData.centerStaffSalaries) {
+            state.aiParams = aiData;
+            alert('AI 추천 파라미터가 성공적으로 적용되었습니다.');
+            updateAllUI(); // Recalculate everything with new AI data
+        } else {
+            throw new Error("Invalid data structure from AI.");
+        }
+
+    } catch (error) {
+        console.error("AI Parameter Fetch Error:", error);
+        alert('AI 파라미터 적용 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+        dom.aiParamsBtn.disabled = false;
+        dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
+    }
+  }
+
+
+  // --- EVENT LISTENERS ---
+  function setupEventListeners() {
+    dom.storeSlider.addEventListener('input', (e) => {
+      state.forcedLevel = null; // Revert to auto mode when slider is used
+      const storeCount = mapSliderToStoreCount(e.target.value);
+      if (storeCount !== state.storeCount) {
+        state.storeCount = storeCount;
+        updateAllUI();
+      }
+    });
+
+    dom.applyChangesBtn.addEventListener('click', updateAllUI);
+    dom.aiParamsBtn.addEventListener('click', fetchAiParameters);
+    
+    Object.entries(dom.forceLevelButtons).forEach(([key, btn]) => {
+        btn.addEventListener('click', () => {
+            state.forcedLevel = key === 'auto' ? null : key.toUpperCase();
+            updateAllUI();
+        });
+    });
+
+
+    // Add formatting to all numeric inputs on blur
+    const numericInputs = document.querySelectorAll('input[type="text"]');
+    numericInputs.forEach(input => {
+        if (!input.readOnly) {
+           input.addEventListener('blur', (e) => {
+              const val = parseFormattedNumber(e.target.value);
+              if (!isNaN(val) && e.target.id !== 'pl_pf' && e.target.id !== 'pl_util_rate' && e.target.id !== 'pl_3pl_rate' && e.target.id !== 'pl_b_savings' && e.target.id !== 'pl_patrol_wage' && e.target.id !== 'pl_washing_wage' && e.target.id !== 'hq_margin_rate' ) {
+                 e.target.value = formatNumber(val);
+              }
+           });
+        }
+    });
+
+    dom.summaryLevelChip.addEventListener('click', () => {
+        showCapexModal(state.currentLevel);
+    });
+    dom.modal.closeBtn.addEventListener('click', hideCapexModal);
+    dom.modal.backdrop.addEventListener('click', (e) => {
+        if (e.target === dom.modal.backdrop) {
+            hideCapexModal();
+        }
+    });
+  }
+
+  // --- INITIALIZATION ---
+  window.addEventListener('load', () => {
+    // Format initial numbers
+    const allInputs = document.querySelectorAll('input[type="text"]');
+    allInputs.forEach(input => {
+        if (!input.readOnly) {
+           const val = parseFormattedNumber(input.value);
+            if (!isNaN(val) && input.id !== 'pl_pf' && input.id !== 'pl_util_rate' && input.id !== 'pl_3pl_rate' && input.id !== 'pl_b_savings' && input.id !== 'pl_patrol_wage' && input.id !== 'pl_washing_wage' && input.id !== 'hq_margin_rate' ) {
+             input.value = formatNumber(val);
+            }
+        }
+    });
+
+    setupEventListeners();
+    updateAllUI();
+  });
+</script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
+C레벨에서 물류 및 C레벨 가정은 의미 없어. 그러니 자동으로 숨겨줘.
