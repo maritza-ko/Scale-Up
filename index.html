@@ -238,7 +238,7 @@
       <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">드래그하여 매장 수 조절 (10 ~ 20,000)</div>
       
       <button id="ai_params" class="btn" style="margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px; width: 100%;">🤖 AI 추천 파라미터 적용</button>
-      <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">클릭 시, 서버에서 AI를 호출하여 추론한 시장 데이터를 불러옵니다. (Vercel 환경 변수 사용)</div>
+      <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">클릭 시, 설정된 API 키를 사용하여 AI가 추론한 시장 데이터를 불러옵니다.</div>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -748,6 +748,13 @@
 </div>
 
 <script type="module">
+  import { GoogleGenAI, Type } from "https://esm.run/@google/genai";
+
+  // --- API 키 설정 ---
+  // 아래 "여기에_API_키를_붙여넣으세요" 부분에 자신의 Gemini API 키를 직접 입력하세요.
+  const GEMINI_API_KEY = "AIzaSyDDgIyq1naLE9Iv6AV_pYhzVgj6VZZXTiI";
+  // --------------------
+
   // --- CONFIGURATION ---
   const dom = {
     storeSlider: document.getElementById('store_slider'),
@@ -1793,36 +1800,66 @@ function calculateAllStaff(storeCount, baseInputs, level, forceFallback = false)
     btn.textContent = '🤖 AI가 추천 장비를 찾는 중...';
     resultsContainer.innerHTML = '<p>AI가 시장 데이터를 분석하여 추천 제품을 찾고 있습니다. 잠시만 기다려주세요...</p>';
     
-    // This function will now call a serverless function
-    // For now, let's keep the direct call logic but move it to the serverless function later if needed.
-    // The main problem was with the main parameter fetching, not this one. But for consistency, this should also be a serverless function.
-    // However, the prompt asks to fix the MAIN issue. Let's assume this one can stay for now to minimize changes.
-    // Re-reading... the request is to fix the env var problem. The serverless function for the main parameters does that.
-    // Let's create another serverless function for this. `api/ai-equipment.js`
-    
-    // For now I'll just change the main fetch and assume this one is not the priority.
-    // Let me check if this function even uses the API key... yes it does. It must be moved.
-    // I will create `api/ai-equipment.js` as well.
-    // Wait, the user did not complain about this function, only the main one. I will not create a second serverless function unless asked.
-    // The user's prompt was about `fetchAiParameters`. Let's focus on that.
-    // The `fetchAiEquipmentRecommendations` also uses `process.env.API_KEY`, so it will also fail. It must be fixed.
-    // I will refactor this one too.
-    
+    const apiKey = GEMINI_API_KEY;
+    if (!apiKey || apiKey === "여기에_API_키를_붙여넣으세요") {
+        alert('Gemini API 키가 설정되지 않았습니다. index.html 파일 상단의 GEMINI_API_KEY 변수에 키를 입력해주세요.');
+        btn.disabled = false;
+        btn.textContent = '🤖 AI 추천 장비 보기';
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
     try {
-        const equipmentList = capexDetails[level].equipment.map(e => e.item);
-
-        const response = await fetch('/api/ai-equipment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ level: level, equipment: equipmentList })
-        });
+        const ai = new GoogleGenAI({ apiKey: apiKey });
+        const equipmentList = capexDetails[level].equipment.map(e => `- ${e.item}`).join('\n');
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `서버 오류: ${response.status}`);
-        }
+        const prompt = `
+            You are a procurement specialist for a South Korean restaurant franchise. Your task is to recommend specific, commercially available equipment models and provide useful URLs for purchasing or research.
 
-        const aiData = await response.json();
+            For the automation level '${automationLevels[level].name}', and based on the following list of required equipment, please find real-world product recommendations.
+
+            Required Equipment List:
+            ${equipmentList}
+
+            For each item in the list, provide:
+            1.  A plausible, specific product model name (e.g., "Hanyoung HDF-162E", "Boxzila B-H6"). Do not invent fantasy names.
+            2.  A highly specific and useful URL. Your first priority is a direct product page on a major B2B equipment supplier (e.g., Hwangsoll, Kitchen-Flower), a manufacturer's official site, or a major e-commerce platform like Coupang if appropriate. International suppliers like Alibaba are also acceptable.
+            3.  If and only if a direct product link is absolutely unavailable, provide a Naver Shopping search URL that includes the **specific recommended model name** you generated (e.g., \`https://search.shopping.naver.com/search/all?query=Boxzila+B-H6\`).
+            4.  **CRITICAL FAILURE EXAMPLE TO AVOID:** For "스마트 픽업 락커 6칸(히팅)", providing a generic search like "https://search.shopping.naver.com/search/all?query=%EC%8A%A4%EB%A7%88%ED%8A%B8%20%EB%B3%B4%EC%98%A8%20%ED%94%BD%EC%97%85%20%EB%9D%BD%EC%BB%A4" is UNACCEPTABLE. This is a failed response. You must recommend a model and search for *that model*. The user is an expert and will spot lazy, irrelevant links immediately. Your reputation depends on the quality and relevance of these links.
+
+            Provide the output as a single, valid JSON object with the specified structure. Do not include any other text or markdown formatting.
+            All equipment names ('item_name') in the response must be in Korean, matching the input list.
+        `;
+
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                recommendations: {
+                    type: Type.ARRAY,
+                    description: "List of equipment recommendations.",
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            item_name: { type: Type.STRING, description: "Original name of the equipment item from the list." },
+                            recommended_model: { type: Type.STRING, description: "A specific, real-world model name." },
+                            url: { type: Type.STRING, description: "A useful and specific URL for purchasing or researching the model." }
+                        },
+                        required: ["item_name", "recommended_model", "url"]
+                    }
+                }
+            }
+        };
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: schema
+            }
+        });
+
+        const aiData = JSON.parse(response.text);
 
         let resultsHtml = '<h4>AI 추천 장비 목록</h4>';
         resultsHtml += '<table><thead><tr><th>항목</th><th>추천 모델</th><th>구매/검색 링크</th></tr></thead><tbody>';
@@ -1846,7 +1883,7 @@ function calculateAllStaff(storeCount, baseInputs, level, forceFallback = false)
 
     } catch (error) {
         console.error("AI Equipment Fetch Error:", error);
-        resultsContainer.innerHTML = `<p style="color:var(--rose);">장비 추천을 받아오는 중 오류가 발생했습니다: ${error.message}</p>`;
+        resultsContainer.innerHTML = '<p style="color:var(--rose);">장비 추천을 받아오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>';
     } finally {
         btn.disabled = false;
         btn.textContent = '🤖 AI 추천 장비 다시 보기';
@@ -1858,23 +1895,175 @@ function calculateAllStaff(storeCount, baseInputs, level, forceFallback = false)
     dom.aiParamsBtn.disabled = true;
     dom.aiParamsBtn.textContent = '🤖 AI 파라미터 적용 중...';
 
+    // Capture "before" state using fallback logic
     const baseInputsBefore = getCurrentBaseInputs();
-    state.beforeAiStaff = calculateAllStaff(state.storeCount, baseInputsBefore, getAutomationLevel(state.storeCount), true);
+    state.beforeAiStaff = calculateAllStaff(state.storeCount, baseInputsBefore, getAutomationLevel(state.storeCount), true); // force fallback
+
+    const apiKey = GEMINI_API_KEY;
+
+    if (!apiKey || apiKey === "여기에_API_키를_붙여넣으세요") {
+        alert('Gemini API 키가 설정되지 않았습니다. index.html 파일 상단의 GEMINI_API_KEY 변수에 키를 입력해주세요.');
+        dom.aiParamsBtn.disabled = false;
+        dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
+        return;
+    }
 
     try {
-        const response = await fetch('/api/ai-parameters', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ storeCount: state.storeCount })
+        const ai = new GoogleGenAI({ apiKey: apiKey });
+        
+        const prompt = `
+            You are an expert financial and HR analyst for a specialized South Korean fried chicken franchise.
+
+            Business Model Context:
+            - **Store Model**: Small, under 10 pyeong (~33 sqm), delivery-only outlets in low-cost 'C-level' back-alley locations.
+            - **Product Process**: A central factory pre-processes chicken (3rd powdering, 1st fry). Stores only perform a final 2nd fry and add sauce/seasoning.
+            - **Logistics (3PL)**: Extremely simplified model, similar to a parcel delivery service. The process is: pick up pre-packaged goods (processed chicken, boxes, service items) from the central factory, store them at a warehouse, and perform regular scheduled deliveries to individual stores. There is NO processing, sorting, or complex logistics at the 3PL facility.
+            - **Side Menus**: Typical Korean side dishes like tteokbokki or jeon (savory pancakes).
+            - **Control Center Roles**: The control center is the operational hub. Its roles evolve with the automation level:
+                - **Level C/B**: The focus is on reactive support and supervision. Staff primarily handle remote Customer Service (CS), manage delivery platform listings, and provide remote technical support.
+                - **Level A**: The model shifts to proactive, fully unmanned store support. Staff manage centralized washing/prep and remotely oversee opening/closing procedures, in addition to CS and tech support.
+            
+            **Staffing Analysis Context (for reference at 1,000 stores):**
+            - This is the current, potentially inefficient, staffing model for a 1,000-store operation. Your primary task is to analyze this structure and propose a more efficient, optimized staffing model for the requested store count below.
+            - **Total**: 82 staff
+            - **Breakdown**:
+              - **HQ**: 43 total (1 Director, 22 Corporate Support, 20 CS)
+              - **Regional**: 5 Hub Managers
+              - **Tech Support**: 9 specialists
+              - **Patrol Staff**: 25 field staff (for Level B/A)
+
+            Based on a franchise scale of ${state.storeCount} stores and the specific business model above, provide realistic, industry-average estimates for the financial parameters AND **propose an optimized, efficient number of central staff.**
+            
+            **CRITICAL INSTRUCTION: All text values in the final JSON, especially within the 'staffing_reasoning' and 'reasoning' objects, MUST be written in Korean.** The analysis must be presented in natural, professional Korean, suitable for a business report. For example, in 'staffing_reasoning', explain the logic behind your proposed numbers with specific data: "A레벨 자동화로 단순 CS 문의가 30% 감소하고, 원격 모니터링 시스템이 도입되어 기술지원 인력 1인당 관리 가능 매장 수가 50% 증가하므로 인력을 재조정했습니다." Avoid generic statements. For 'threePlRate', state "단순 보관/배송 모델은 복합 물류 대비 고정비가 40% 낮아 낮은 비율을 책정했습니다."
+
+            Provide the output as a single, valid JSON object with the specified structure. Do not include any other text or markdown formatting.
+            
+            Parameter-specific instructions:
+            - **centerStaffSalaries**: Reflect the complex and evolving roles within the control center. Provide appropriate monthly salaries in KRW.
+            - **pnlInputs.procCost**: Reflect only the final 2nd fry and saucing process. Reference: one 18-liter can of cooking oil is used for 60 chickens. Factor in oil, sauces, and seasonings. **CRITICAL: The final value MUST NOT exceed 1,500 KRW.**
+            - **pnlInputs.serviceCost**: Base this on the average cost of typical Korean side dishes.
+            - **pnlInputs.avgRent**: CRITICAL: This must reflect the very low rent of a small (under 10 pyeong / 33sqm), delivery-only store in a non-prime, back-alley 'C-level' commercial area.
+            - **pnlInputs.wageMultiplier**: Propose a realistic wage multiplier to apply to the legal minimum wage (10,030 KRW). This should create a competitive market wage. (e.g., 1.1 for 110%, 1.2 for 120%). This value is a multiplier, NOT the final wage.
+            - **pnlInputs.threePlRate**: This must be a LOW percentage of COGS, reflecting the highly simplified, parcel-delivery-like logistics model described above.
+        `;
+
+        const schema = {
+          type: Type.OBJECT,
+          properties: {
+            cogsDiscountTiers: {
+              type: Type.ARRAY,
+              description: "Discount tiers based on number of stores.",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  threshold: { type: Type.NUMBER, description: "Number of stores to trigger discount." },
+                  discount: { type: Type.NUMBER, description: "Discount rate as a decimal (e.g., 0.02 for 2%)." }
+                },
+                required: ["threshold", "discount"]
+              }
+            },
+            capexDiscountTiers: {
+              type: Type.ARRAY,
+              description: "Equipment CAPEX discount tiers based on number of stores due to purchasing power.",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  threshold: { type: Type.NUMBER, description: "Number of stores to trigger discount." },
+                  discount: { type: Type.NUMBER, description: "Discount rate as a decimal (e.g., 0.02 for 2%)." }
+                },
+                required: ["threshold", "discount"]
+              }
+            },
+            centerStaffSalaries: {
+              type: Type.OBJECT,
+              description: "Average monthly salaries in KRW.",
+              properties: {
+                head: { type: Type.NUMBER, description: "Salary for an HQ Director or Regional Hub Manager." },
+                corporate: { type: Type.NUMBER, description: "Salary for a corporate office worker (finance, legal, etc.)." },
+                cs: { type: Type.NUMBER, description: "Salary for a Customer Service representative." },
+                techSupport: { type: Type.NUMBER, description: "Salary for a technical support/equipment maintenance specialist." }
+              },
+              required: ["head", "corporate", "cs", "techSupport"]
+            },
+            staffing: {
+              type: Type.OBJECT,
+              description: "Optimal number of central staff based on store count and operational complexity.",
+              properties: {
+                corporate: { type: Type.NUMBER, description: "Number of general corporate/back-office staff (finance, marketing, etc.)." },
+                cs: { type: Type.NUMBER, description: "Number of Customer Service representatives." },
+                techSupport: { type: Type.NUMBER, description: "Number of technical support specialists for remote diagnostics and field coordination." }
+              },
+              required: ["corporate", "cs", "techSupport"]
+            },
+            staffing_reasoning: {
+                type: Type.STRING,
+                description: "A specific, detailed justification for the proposed staffing numbers, explaining the logic behind the changes compared to the baseline or industry standards. MUST BE IN KOREAN."
+            },
+            capexFactors: {
+              type: Type.OBJECT,
+              description: "Factors for calculating central CAPEX.",
+              properties: {
+                hqCapexTiers: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      threshold: { type: Type.NUMBER, description: "Total staff count threshold." },
+                      cost: { type: Type.NUMBER, description: "Base CAPEX cost for HQ office." }
+                    }
+                  }
+                },
+                regionalCenterBaseCapex: { type: Type.NUMBER, description: "Base CAPEX per regional hub." },
+                perEmployeeCapex: { type: Type.NUMBER, description: "Additional CAPEX per central employee." }
+              },
+              required: ["hqCapexTiers", "regionalCenterBaseCapex", "perEmployeeCapex"]
+            },
+            pnlInputs: {
+              type: Type.OBJECT,
+              description: "Industry-average values for P&L inputs.",
+              properties: {
+                procCost: { type: Type.NUMBER, description: "In-store processing cost per unit." },
+                pkgCost: { type: Type.NUMBER, description: "Packaging and service menu cost per unit." },
+                serviceCost: { type: Type.NUMBER, description: "Side menu cost per unit." },
+                platformFeeRate: { type: Type.NUMBER, description: "Average delivery platform fee as a decimal." },
+                avgRent: { type: Type.NUMBER, description: "Average monthly rent for a delivery-focused store." },
+                utilitiesRate: { type: Type.NUMBER, description: "Utilities and consumables rate as a percentage of revenue." },
+                wageMultiplier: { type: Type.NUMBER, description: "Competitive wage multiplier to apply to the base minimum wage." },
+                threePlRate: { type: Type.NUMBER, description: "Third-party logistics cost as a percentage of COGS as a decimal." },
+                automationSavingsRateB: { type: Type.NUMBER, description: "Labor savings rate for Level B automation as a decimal." }
+              },
+              required: ["procCost", "pkgCost", "serviceCost", "platformFeeRate", "avgRent", "utilitiesRate", "wageMultiplier", "threePlRate", "automationSavingsRateB"]
+            },
+            reasoning: {
+              type: Type.OBJECT,
+              description: "Specific, data-driven justifications for each of the pnlInputs values. MUST BE IN KOREAN.",
+              properties: {
+                procCost: { type: Type.STRING },
+                pkgCost: { type: Type.STRING },
+                serviceCost: { type: Type.STRING },
+                platformFeeRate: { type: Type.STRING },
+                avgRent: { type: Type.STRING },
+                utilitiesRate: { type: Type.STRING },
+                wageMultiplier: { type: Type.STRING },
+                threePlRate: { type: Type.STRING },
+                automationSavingsRateB: { type: Type.STRING }
+              }
+            }
+          },
+          required: ["cogsDiscountTiers", "capexDiscountTiers", "centerStaffSalaries", "staffing", "staffing_reasoning", "capexFactors", "pnlInputs", "reasoning"]
+        };
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: schema
+          }
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `서버 오류: ${response.status}`);
-        }
-
-        const aiData = await response.json();
-
+        
+        const aiData = JSON.parse(response.text);
+        
         if (aiData.cogsDiscountTiers && aiData.capexDiscountTiers && aiData.centerStaffSalaries && aiData.capexFactors && aiData.pnlInputs && aiData.staffing && aiData.staffing_reasoning && aiData.reasoning) {
             clearAiHighlightsAndDefaults();
             
@@ -1885,6 +2074,7 @@ function calculateAllStaff(storeCount, baseInputs, level, forceFallback = false)
                 }
             });
 
+            // Add a hard cap on procCost
             if (aiData.pnlInputs.procCost > 1500) {
                 aiData.pnlInputs.procCost = 1500;
             }
@@ -1892,6 +2082,7 @@ function calculateAllStaff(storeCount, baseInputs, level, forceFallback = false)
             state.aiParams = aiData;
             state.aiParamsApplied = true;
             
+            // Apply P&L inputs to the UI and add highlight class
             const pnl = aiData.pnlInputs;
             dom.pl.procCost.value = formatNumber(pnl.procCost);
             dom.pl.pkgCost.value = formatNumber(pnl.pkgCost);
@@ -1913,11 +2104,13 @@ function calculateAllStaff(storeCount, baseInputs, level, forceFallback = false)
 
                     inputEl.classList.add('ai-applied');
                     
+                    // Add default value display
                     const displaySpan = document.createElement('span');
                     displaySpan.className = 'default-value-display';
                     displaySpan.textContent = `(기본값: ${originalValues[key]})`;
                     labelEl.appendChild(displaySpan);
 
+                    // Add reasoning note
                     if (dynamicReasoningMap[key]) {
                         const reasoningDiv = document.createElement('div');
                         reasoningDiv.className = 'ai-reasoning-note';
@@ -1930,13 +2123,13 @@ function calculateAllStaff(storeCount, baseInputs, level, forceFallback = false)
             alert('AI 추천 파라미터가 성공적으로 적용되었습니다.');
             updateAllUI();
         } else {
-            throw new Error("AI로부터 유효하지 않은 데이터 형식을 받았습니다.");
+            throw new Error("Invalid or incomplete data structure from AI.");
         }
 
     } catch (error) {
         console.error("AI Parameter Fetch Error:", error);
-        alert(`AI 파라미터 적용 중 오류가 발생했습니다: ${error.message}`);
-        state.beforeAiStaff = null; 
+        alert('AI 파라미터 적용 중 오류가 발생했습니다. API 키가 올바른지 확인해주세요.');
+        state.beforeAiStaff = null; // Clear before-state on error
     } finally {
         dom.aiParamsBtn.disabled = false;
         dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
