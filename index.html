@@ -95,8 +95,8 @@
 
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
   /* PNL 입력값 변경 시 ROI와 동기화 및 즉시 계산이 일어나도록 oninput 추가 */
-  input[type="text"],input[type="number"],input[type="password"]{width:100%;background:#0d1624;color:#e6edf3;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px}
-  input:disabled { background: #0a1018; color: var(--muted); }
+  input[type="text"],input[type="number"],input[type="password"]{width:100%;background:#0d1624;color:#e6edf3;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px; transition: all 0.3s;}
+  input:read-only { background: #0a1018; color: var(--muted); cursor: default; }
   .btn{display:inline-block;background:linear-gradient(90deg,#38bdf8,#60a5fa);color:#001018;font-weight:800;border:none;padding:9px 12px;border-radius:10px;cursor:pointer}
   .btn:disabled { background: var(--slate); color: var(--muted); cursor: not-allowed; }
   .row{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
@@ -128,6 +128,29 @@
   .modal-body li { margin-bottom: 8px; }
   .modal-body h4 { margin: 15px 0 8px; font-size: 16px; border-bottom: 1px dashed var(--line); padding-bottom: 5px; }
   .modal-body .total-row { font-weight: bold; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+  .modal-body #ai_equipment_recommendation_btn {
+      width: 100%;
+      margin-bottom: 15px;
+      background: linear-gradient(90deg, var(--teal), var(--sky));
+  }
+  #ai_recommendation_results {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px dashed var(--line);
+  }
+  #ai_recommendation_results h4 {
+      margin-top: 0;
+  }
+  #ai_recommendation_results table {
+      font-size: 13px;
+  }
+  #ai_recommendation_results a {
+      color: var(--skyL);
+      text-decoration: none;
+  }
+  #ai_recommendation_results a:hover {
+      text-decoration: underline;
+  }
   
   /* Simulator Section Specific Font Sizes */
   #simulator label[for="store_slider"] { font-size: 14px; }
@@ -140,6 +163,34 @@
   .pill-btn { background: var(--chip); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
   .pill-btn:hover { border-color: #314358; color: #fff; }
   .pill-btn.active { background: var(--sky); color: var(--bg); border-color: var(--sky); font-weight: bold; }
+  
+  /* AI Applied Highlight Styles */
+  .ai-applied {
+    background-color: #103c2b !important;
+    border-color: #22c55e !important;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+  }
+  .ai-applied-text {
+    transition: color 0.4s ease-in-out;
+    color: var(--green) !important;
+    font-weight: bold;
+  }
+  .default-value-display {
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: 6px;
+    font-style: italic;
+    white-space: nowrap;
+  }
+  .ai-reasoning-note {
+    display: block;
+    font-size: 11px;
+    color: var(--green);
+    opacity: 0.8;
+    margin-top: 4px;
+    font-style: italic;
+    padding-left: 2px;
+  }
   
   @media (max-width:900px){ .g-2,.g-3{grid-template-columns:1fr} nav{position:static} }
 </style>
@@ -186,19 +237,8 @@
       <input id="store_slider" type="range" min="0" max="1000" value="0" style="width: 100%;">
       <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">드래그하여 매장 수 조절 (10 ~ 20,000)</div>
       
-      <div id="api_key_entry_container" style="margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px;">
-        <label for="api_key_input">Gemini API Key</label>
-        <input id="api_key_input" type="password" placeholder="API 키를 여기에 붙여넣으세요" style="margin-bottom: 4px;">
-        <div class="note" style="border-top: none; padding-top: 0; margin-top: 0;">AI 추천 기능을 사용하려면 API 키가 필요합니다. 키는 브라우저에만 저장되며 서버로 전송되지 않습니다.</div>
-      </div>
-      
-      <div id="api_key_saved_container" style="display: none; margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px;">
-        <div class="note" style="border-top: none; padding-top: 0; margin-top: 0; color: var(--green);">✓ API 키가 안전하게 저장되었습니다.</div>
-        <button id="change_api_key_btn" class="pill-btn" style="margin-top: 8px;">키 변경</button>
-      </div>
-      
-      <button id="ai_params" class="btn" style="margin-top: 12px;">🤖 AI 추천 파라미터 적용</button>
-      <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">클릭 시, AI가 추론한 시장 데이터(원가 할인율, 센터 급여 등)를 불러와 시뮬레이션에 적용합니다.</div>
+      <button id="ai_params" class="btn" style="margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px; width: 100%;">🤖 AI 추천 파라미터 적용</button>
+      <div class="note" style="border-top: none; padding-top: 4px; margin-top: 4px;">클릭 시, Vercel 환경 변수에 저장된 API 키를 사용하여 AI가 추론한 시장 데이터를 불러옵니다.</div>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -320,8 +360,9 @@
       <div class="card">
           <div class="lead">인건비 & 운영 기본 가정</div>
           <label>근무시간(시간/일) <input id="pl_hours" type="text" value="13" /></label>
-          <label>기본 시급(원) <input id="pl_base_wage" type="text" value="10,320" /></label>
-          <label>책정 시급 (기본 × 1.2) <input id="pl_calc_wage" type="text" value="12,384" readonly /></label>
+          <label>기본 시급(원) <input id="pl_base_wage" type="text" value="10,030" readonly /></label>
+          <label>책정 시급 승수 (AI 추천) <input id="pl_wage_multiplier" type="text" value="1.2" /></label>
+          <label>책정 시급 (기본 × 승수) <input id="pl_calc_wage" type="text" value="12,036" readonly /></label>
           <label>월 일수 <input id="pl_days" type="text" value="30" /></label>
           <div class="note" style="border:none; padding:0; margin-top: 8px;">모든 인건비 계산의 기초가 되는 값입니다.</div>
           
@@ -713,10 +754,6 @@
   const dom = {
     storeSlider: document.getElementById('store_slider'),
     sliderValDisplay: document.getElementById('slider_val_display'),
-    apiKeyInput: document.getElementById('api_key_input'),
-    apiKeyEntryContainer: document.getElementById('api_key_entry_container'),
-    apiKeySavedContainer: document.getElementById('api_key_saved_container'),
-    changeApiKeyBtn: document.getElementById('change_api_key_btn'),
     aiParamsBtn: document.getElementById('ai_params'),
     applyChangesBtn: document.getElementById('apply_changes'),
     forceLevelButtons: {
@@ -770,6 +807,7 @@
       saas: document.getElementById('pl_saas'),
       hours: document.getElementById('pl_hours'),
       baseWage: document.getElementById('pl_base_wage'),
+      wageMultiplier: document.getElementById('pl_wage_multiplier'),
       calcWage: document.getElementById('pl_calc_wage'),
       days: document.getElementById('pl_days'),
       capex: document.getElementById('pl_capex'),
@@ -906,15 +944,7 @@
   };
 
   const STORES_PER_REGIONAL_CENTER = 100;
-  const REGIONAL_CENTER_BASE_CAPEX = 30000000;
-  const PER_EMPLOYEE_CAPEX = 3000000;
-
-  const hqCapexTiers = [
-      { threshold: 0, cost: 50000000 },   // < 50 staff
-      { threshold: 50, cost: 100000000 }, // 50-200 staff
-      { threshold: 200, cost: 300000000 } // > 200 staff
-  ];
-
+  
   const automationLevels = {
       C: { threshold: 0, name: 'Level C', unitCapex: 43949360, baseFTE: 1.2 },
       B: { threshold: 500, name: 'Level B', unitCapex: 62806388, baseFTE: 1.2 },
@@ -987,19 +1017,68 @@
     storeCount: 10,
     currentLevel: 'C',
     forcedLevel: null,
+    aiParamsApplied: false,
+    beforeAiStaff: null,
     aiParams: {
         cogsDiscountTiers: [
             { threshold: 100, discount: 0.02 },
             { threshold: 500, discount: 0.05 },
             { threshold: 1000, discount: 0.08 }
         ],
+        capexDiscountTiers: [
+            { threshold: 100, discount: 0.03 },
+            { threshold: 500, discount: 0.06 },
+            { threshold: 1000, discount: 0.10 }
+        ],
         centerStaffSalaries: {
             head: 6000000,
             corporate: 4500000,
             cs: 3500000,
             techSupport: 4000000
+        },
+        staffing: {
+            corporate: 5,
+            cs: 1,
+            techSupport: 1,
+        },
+        capexFactors: {
+            hqCapexTiers: [
+              { threshold: 0, cost: 50000000 },
+              { threshold: 50, cost: 100000000 },
+              { threshold: 200, cost: 300000000 }
+            ],
+            regionalCenterBaseCapex: 30000000,
+            perEmployeeCapex: 3000000
+        },
+        pnlInputs: {
+            procCost: 700,
+            pkgCost: 1500,
+            serviceCost: 2000,
+            platformFeeRate: 0.25,
+            avgRent: 1000000,
+            utilitiesRate: 0.04,
+            wageMultiplier: 1.2,
+            threePlRate: 0.03,
+            automationSavingsRateB: 0.15
         }
     }
+  };
+
+  const aiHighlightableInputs = [
+    'procCost', 'pkgCost', 'serviceCost', 'pf', 'rent', 'utilRate',
+    'wageMultiplier', 'threePlRate', 'bSavings'
+  ];
+
+  const aiReasoningMap = {
+    procCost: "2차 튀김/소스 공정과 유류비(60마리/통)를 반영한 현실적 원가입니다.",
+    pkgCost: "배달 전문점의 평균 포장재 및 기본 서비스 메뉴 원가입니다.",
+    serviceCost: "떡볶이 등 일반적인 사이드 메뉴의 시장 평균 원가를 반영했습니다.",
+    pf: "주요 배달 플랫폼의 평균 수수료 및 광고비를 종합적으로 고려했습니다.",
+    rent: "10평 이하 골목 상권 배달 전문점의 저렴한 임대료 시세를 반영했습니다.",
+    utilRate: "유사 규모의 배달 전문점 평균 매출 대비 공과금/소모품 비율입니다.",
+    wageMultiplier: "법정 최저시급 대비, 동종 업계의 경쟁력 있는 시급을 위한 승수입니다.",
+    threePlRate: "단순 보관/배송 모델에 맞춘 낮은 3자 물류 비용 비율을 제안합니다.",
+    bSavings: "B레벨 자동화(락커 등) 도입 시 기대되는 평균 인력 효율화 비율입니다."
   };
 
   // --- UTILITIES ---
@@ -1016,7 +1095,6 @@
 
   function parseFormattedNumber(str) {
       if (!str) return 0;
-      // Handle special case for "---"
       if (typeof str === 'string' && str.trim() === '---') return 0;
       return Number(String(str).replace(/,/g, ''));
   }
@@ -1025,6 +1103,26 @@
     const el = dom.pl[elementId] || document.getElementById(elementId);
     if (!el) return isNumeric ? 0 : '';
     return isNumeric ? parseFormattedNumber(el.value) : el.value;
+  }
+
+  function clearAiHighlightsAndDefaults() {
+      // Clear input highlights
+      document.querySelectorAll('.ai-applied').forEach(el => el.classList.remove('ai-applied'));
+      // Clear all default value displays
+      document.querySelectorAll('.default-value-display').forEach(el => el.remove());
+      // Clear all reasoning notes
+      document.querySelectorAll('.ai-reasoning-note').forEach(el => el.remove());
+      // Clear staff highlight
+      const staffEl = dom.conclusionStaff;
+      if (staffEl) {
+        staffEl.innerHTML = staffEl.innerHTML.replace(/<span class="ai-applied-text">/g, '').replace(/<\/span>/g, '');
+      }
+  }
+  
+  function resetAiState() {
+      state.aiParamsApplied = false;
+      state.beforeAiStaff = null;
+      clearAiHighlightsAndDefaults();
   }
 
   // --- MAPPING & CALCULATION LOGIC ---
@@ -1055,6 +1153,7 @@
   }
 
   function calculateCogsDiscount(storeCount) {
+    if (!state.aiParamsApplied) return 0;
     const tiers = state.aiParams.cogsDiscountTiers;
     let discount = 0;
     for (let i = tiers.length - 1; i >= 0; i--) {
@@ -1065,8 +1164,33 @@
     }
     return discount;
   }
+  
+  function calculateCapexDiscount(storeCount) {
+    if (!state.aiParamsApplied) return 0;
+    const tiers = state.aiParams.capexDiscountTiers || [];
+    let discount = 0;
+    for (let i = tiers.length - 1; i >= 0; i--) {
+        if (storeCount >= tiers[i].threshold) {
+            discount = tiers[i].discount;
+            break;
+        }
+    }
+    return discount;
+  }
+  
+  function getEffectiveUnitCapex(level) {
+      const baseCapex = automationLevels[level].unitCapex;
+      const discount = calculateCapexDiscount(state.storeCount);
+      return baseCapex * (1 - discount);
+  }
 
- function calculateCorporateStaff(storeCount) {
+ function calculateCorporateStaff(storeCount, forceFallback = false) {
+    if (!forceFallback && state.aiParamsApplied && state.aiParams.staffing) {
+        const support = state.aiParams.staffing.corporate;
+        const cs = state.aiParams.staffing.cs;
+        return { support, cs, total: support + cs };
+    }
+    // Fallback logic
     const baseSupport = 5;
     const incrementalSupport = Math.floor(storeCount / 50);
     const support = baseSupport + incrementalSupport;
@@ -1082,15 +1206,21 @@
     return { support, cs, total: support + cs };
 }
 
-function calculateRegionalStaff(storeCount) {
+function calculateRegionalStaff(storeCount, forceFallback = false) {
     const regionalHubManagers = Math.floor(storeCount / STORES_PER_REGIONAL_CENTER);
-    const techSupport = Math.ceil(storeCount / 20);
+    let techSupport;
+    if (!forceFallback && state.aiParamsApplied && state.aiParams.staffing) {
+        techSupport = state.aiParams.staffing.techSupport;
+    } else {
+        // Fallback logic
+        techSupport = Math.ceil(storeCount / 20);
+    }
     return { regionalHubManagers, techSupport, total: regionalHubManagers + techSupport };
 }
 
-function calculateAllStaff(storeCount, baseInputs, level) {
-  const corporate = calculateCorporateStaff(storeCount);
-  const regional = calculateRegionalStaff(storeCount);
+function calculateAllStaff(storeCount, baseInputs, level, forceFallback = false) {
+  const corporate = calculateCorporateStaff(storeCount, forceFallback);
+  const regional = calculateRegionalStaff(storeCount, forceFallback);
   const washing = calculateWashingLaborCost(storeCount, baseInputs, level);
   const patrol = calculatePatrolLaborCost(storeCount, baseInputs, level);
   
@@ -1122,17 +1252,18 @@ function calculateAllStaff(storeCount, baseInputs, level) {
   }
   
   function calculateTotalHqCapex(storeCount, totalStaff) {
+      const factors = state.aiParams.capexFactors;
       let hqBase = 0;
-      for (let i = hqCapexTiers.length - 1; i >= 0; i--) {
-        if (totalStaff >= hqCapexTiers[i].threshold) {
-            hqBase = hqCapexTiers[i].cost;
+      for (let i = factors.hqCapexTiers.length - 1; i >= 0; i--) {
+        if (totalStaff >= factors.hqCapexTiers[i].threshold) {
+            hqBase = factors.hqCapexTiers[i].cost;
             break;
         }
       }
       
       const regionalCount = Math.floor(storeCount / STORES_PER_REGIONAL_CENTER);
-      const regionalTotal = regionalCount * REGIONAL_CENTER_BASE_CAPEX;
-      const perEmployeeTotal = totalStaff * PER_EMPLOYEE_CAPEX;
+      const regionalTotal = regionalCount * factors.regionalCenterBaseCapex;
+      const perEmployeeTotal = totalStaff * factors.perEmployeeCapex;
       
       const total = hqBase + regionalTotal + perEmployeeTotal;
       
@@ -1145,7 +1276,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
       const storesPerStaff = baseInputs.assumptions.washingStores > 0 ? baseInputs.assumptions.washingStores : 1;
       const staffCount = Math.ceil(storeCount / storesPerStaff);
       const wageMultiplier = baseInputs.assumptions.washingWage;
-      const wage = (baseInputs.fixed.baseWage * 1.2) * wageMultiplier;
+      const wage = (baseInputs.fixed.baseWage * baseInputs.fixed.wageMultiplier) * wageMultiplier;
       const monthlyCost = staffCount * wage * baseInputs.fixed.hours * baseInputs.fixed.days;
       
       return { totalCost: monthlyCost, staffCount };
@@ -1154,7 +1285,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
  function calculatePatrolLaborCost(storeCount, baseInputs, level) {
     if (level === 'C') return { totalCost: 0, staffCount: 0 };
     
-    const calculatedWage = baseInputs.fixed.baseWage * 1.2;
+    const calculatedWage = baseInputs.fixed.baseWage * baseInputs.fixed.wageMultiplier;
     let storesPerStaff, wageMultiplier, staffCount, wage, monthlyCost;
     
     // For Level B, patrol staff is now active.
@@ -1180,7 +1311,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
 
     // Inputs
     const { aov, unitsDay, rawMeat, procCost, pkgCost, serviceCost, pf, utilRate, threePlRate } = baseInputs.unit;
-    const { hours, baseWage, days, rent, saas, capex } = baseInputs.fixed;
+    const { hours, baseWage, wageMultiplier, days, rent, saas, capex } = baseInputs.fixed;
 
     // COGS with discount
     const cogsDiscount = calculateCogsDiscount(storeCount);
@@ -1203,7 +1334,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
     const totalCenterOpEx = centralWages.total + washingLabor + patrolLabor;
     const centerAlloc = totalCenterOpEx / (storeCount > 0 ? storeCount : 1);
 
-    const calculatedWage = baseWage * 1.2;
+    const calculatedWage = baseWage * wageMultiplier;
     let laborCost;
     let laborDesc;
 
@@ -1244,15 +1375,30 @@ function calculateAllStaff(storeCount, baseInputs, level) {
   }
 
   function calculateFixed10CScenario() {
+      const baseCapex = automationLevels.C.unitCapex; // Fixed scenario has no discount
       const baseInputs = {
           unit: { aov: 22900, unitsDay: 80, rawMeat: 5700, procCost: 700, pkgCost: 1500, serviceCost: 2000, pf: 0.25, utilRate: 0.04, threePlRate: 0.03 },
-          fixed: { hours: 13, baseWage: 10320, days: 30, rent: 1000000, saas: 150000, capex: automationLevels.C.unitCapex },
+          fixed: { hours: 13, baseWage: 10030, wageMultiplier: 1.2, days: 30, rent: 1000000, saas: 150000, capex: baseCapex },
           assumptions: { bSavings: 0.15, patrolStores: 20, patrolWage: 1.1, washingStores: 5, washingWage: 1.5 }
       };
-      // In 10C scenario, level is always C, so patrol/washing is 0
       const pnl = calcPNL(10, baseInputs);
-      // Manually override patrol/washing for fixed scenario if needed, but calcPNL handles it.
       return pnl;
+  }
+  
+  function getCurrentBaseInputs() {
+    const level = getAutomationLevel(state.storeCount);
+    const effectiveCapex = getEffectiveUnitCapex(level);
+    return {
+        unit: { aov: gv('aov'), unitsDay: gv('unitsDay'), rawMeat: gv('rawMeat'), procCost: gv('procCost'), pkgCost: gv('pkgCost'), serviceCost: gv('serviceCost'), pf: gv('pf'), utilRate: gv('utilRate'), threePlRate: gv('threePlRate') },
+        fixed: { hours: gv('hours'), baseWage: gv('baseWage'), wageMultiplier: gv('wageMultiplier'), days: gv('days'), rent: gv('rent'), saas: gv('saas'), capex: effectiveCapex },
+        assumptions: { 
+            bSavings: gv('bSavings'), 
+            patrolStores: gv('patrolStores'), 
+            patrolWage: gv('patrolWage'),
+            washingStores: gv('washingStores'),
+            washingWage: gv('washingWage')
+        }
+    };
   }
 
   // --- UI UPDATE FUNCTIONS ---
@@ -1265,17 +1411,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
     updateAssumptionsUI(level);
 
     // Now, get all base inputs from DOM, which will have the correct values
-    const baseInputs = {
-        unit: { aov: gv('aov'), unitsDay: gv('unitsDay'), rawMeat: gv('rawMeat'), procCost: gv('procCost'), pkgCost: gv('pkgCost'), serviceCost: gv('serviceCost'), pf: gv('pf'), utilRate: gv('utilRate'), threePlRate: gv('threePlRate') },
-        fixed: { hours: gv('hours'), baseWage: gv('baseWage'), days: gv('days'), rent: gv('rent'), saas: gv('saas'), capex: parseFormattedNumber(dom.pl.capex.value) },
-        assumptions: { 
-            bSavings: gv('bSavings'), 
-            patrolStores: gv('patrolStores'), 
-            patrolWage: gv('patrolWage'),
-            washingStores: gv('washingStores'),
-            washingWage: gv('washingWage')
-        }
-    };
+    const baseInputs = getCurrentBaseInputs();
     
     const pnlResults = calcPNL(storeCount, baseInputs);
     const allStaff = pnlResults.allStaff;
@@ -1292,15 +1428,21 @@ function calculateAllStaff(storeCount, baseInputs, level) {
   }
 
   function updateSummaryUI(storeCount, level) {
+    const effectiveCapex = getEffectiveUnitCapex(level);
     dom.summaryStores.textContent = formatNumber(storeCount);
     dom.summaryLevel.textContent = automationLevels[level].name;
-    dom.summaryCapex.textContent = KRW(automationLevels[level].unitCapex);
+    dom.summaryCapex.textContent = KRW(effectiveCapex);
     dom.sliderValDisplay.textContent = formatNumber(storeCount);
   }
   
   function updateConclusionUI(storeCount, level, allStaff) {
       dom.conclusionProposal.innerHTML = `${formatNumber(storeCount)}개 <span style="color:var(--sky)">${automationLevels[level].name}</span>`;
-      dom.conclusionStaff.textContent = `본사/거점 총원: ${allStaff.total}명`;
+      
+      let staffText = `본사/거점 총원: ${allStaff.total}명`;
+      if (state.aiParamsApplied && state.beforeAiStaff && state.beforeAiStaff.total !== allStaff.total) {
+        staffText = `본사/거점 총원: <span class="ai-applied-text">${allStaff.total}명</span> <span class="default-value-display">(기본값: ${state.beforeAiStaff.total}명)</span>`;
+      }
+      dom.conclusionStaff.innerHTML = staffText;
 
       let avgPerHub = 0;
       if (allStaff.regionalCount > 0) {
@@ -1308,37 +1450,66 @@ function calculateAllStaff(storeCount, baseInputs, level) {
           avgPerHub = hubStaff / allStaff.regionalCount;
       }
       
-      const breakdown = `총원 ${allStaff.total}명 구성: 본사 ${allStaff.corporate.total + allStaff.hqDirector}명(센터장 ${allStaff.hqDirector}, 지원 ${allStaff.corporate.support}, CS ${allStaff.corporate.cs}), 지점장 ${allStaff.regional.regionalHubManagers}명, 기술지원 ${allStaff.regional.techSupport}명, 중앙 세척/소분 ${allStaff.washing.staffCount}명 (A레벨), 순회 관리 ${allStaff.patrol.staffCount}명 (B/A레벨). ${allStaff.regionalCount > 0 ? `지역 거점당 평균 ${avgPerHub.toFixed(1)}명 배치.` : ''}`;
-      dom.conclusionStaffNote.innerHTML = `<b>주석</b> — ${breakdown.replace(/\s+/g, ' ').trim()}`;
+      const before = state.beforeAiStaff;
+      const aiApplied = state.aiParamsApplied && before;
+      
+      const supportText = aiApplied && allStaff.corporate.support !== before.corporate.support 
+        ? `<span class="ai-applied-text">${allStaff.corporate.support}</span><span class="default-value-display">(${before.corporate.support})</span>` 
+        : allStaff.corporate.support;
+        
+      const csText = aiApplied && allStaff.corporate.cs !== before.corporate.cs 
+        ? `<span class="ai-applied-text">${allStaff.corporate.cs}</span><span class="default-value-display">(${before.corporate.cs})</span>` 
+        : allStaff.corporate.cs;
+        
+      const techText = aiApplied && allStaff.regional.techSupport !== before.regional.techSupport 
+        ? `<span class="ai-applied-text">${allStaff.regional.techSupport}</span><span class="default-value-display">(${before.regional.techSupport})</span>` 
+        : allStaff.regional.techSupport;
+      
+      let breakdown = `총원 ${allStaff.total}명 구성: 본사 ${allStaff.corporate.total + allStaff.hqDirector}명(센터장 ${allStaff.hqDirector}, 지원 ${supportText}, CS ${csText}), 지점장 ${allStaff.regional.regionalHubManagers}명, 기술지원 ${techText}명, 중앙 세척/소분 ${allStaff.washing.staffCount}명 (A레벨), 순회 관리 ${allStaff.patrol.staffCount}명 (B/A레벨). ${allStaff.regionalCount > 0 ? `지역 거점당 평균 ${avgPerHub.toFixed(1)}명 배치.` : ''}`;
+      
+      let reasoningHtml = '';
+      if (aiApplied && state.beforeAiStaff.total !== allStaff.total) {
+          reasoningHtml = `<br><span class="ai-reasoning-note" style="display:inline;"><b>AI 분석:</b> ${storeCount}개 매장(${level}레벨) 규모의 운영 복잡도를 분석하여, 효율화된 최적의 인력 구성을 제안했습니다.</span>`;
+      }
+
+      dom.conclusionStaffNote.innerHTML = `<b>주석</b> — ${breakdown.replace(/\s+/g, ' ').trim()}${reasoningHtml}`;
   }
 
 
   function updateCapexUI(storeCount, level, allStaff) {
-      const levelInfo = automationLevels[level];
+      const effectiveUnitCapex = getEffectiveUnitCapex(level);
+      const discount = calculateCapexDiscount(storeCount);
       const hqCapex = calculateTotalHqCapex(storeCount, allStaff.total);
+      const factors = state.aiParams.capexFactors;
 
-      const storesTotal = levelInfo.unitCapex * storeCount;
+      const storesTotal = effectiveUnitCapex * storeCount;
       const subtotal = storesTotal + hqCapex.total;
       const contingency = subtotal * 0.05;
       const totalCapex = subtotal + contingency;
 
       dom.capexTitle.textContent = `② ${formatNumber(storeCount)}개 매장 패키지 예산 (CAPEX)`;
-      dom.capexUnit.textContent = KRW(levelInfo.unitCapex);
+      
+      let unitCapexText = KRW(effectiveUnitCapex);
+      if (discount > 0) { // This check now implicitly depends on aiParamsApplied
+          unitCapexText += ` <span class="ai-applied-text" style="font-size: 0.6em;">(${(discount * 100).toFixed(1)}% 할인)</span>`;
+      }
+      dom.capexUnit.innerHTML = unitCapexText;
+      
       dom.capexStoresTotal.textContent = KRW(storesTotal);
-      dom.capexStoresCalc.textContent = `${formatNumber(storeCount)} × ${KRW(levelInfo.unitCapex, false)}`;
+      dom.capexStoresCalc.textContent = `${formatNumber(storeCount)} × ${KRW(effectiveUnitCapex, false)}`;
       
       dom.capexHqBase.textContent = KRW(hqCapex.hqBase);
       dom.capexHqDesc.textContent = `(총 ${allStaff.total}명 규모)`;
       dom.capexRegionalHubs.textContent = KRW(hqCapex.regionalTotal);
-      dom.capexRegionalDesc.textContent = `${hqCapex.regionalCount}개 지점 × ${KRW(REGIONAL_CENTER_BASE_CAPEX, false)}`;
+      dom.capexRegionalDesc.textContent = `${hqCapex.regionalCount}개 지점 × ${KRW(factors.regionalCenterBaseCapex, false)}`;
       dom.capexPerEmployee.textContent = KRW(hqCapex.perEmployeeTotal);
-      dom.capexEmployeeDesc.textContent = `${allStaff.total}명 × ${KRW(PER_EMPLOYEE_CAPEX, false)}`;
+      dom.capexEmployeeDesc.textContent = `${allStaff.total}명 × ${KRW(factors.perEmployeeCapex, false)}`;
       
       dom.capexSubtotal.textContent = KRW(subtotal);
       dom.capexContingency.textContent = KRW(contingency);
       dom.capexTotal.textContent = KRW(totalCapex);
 
-      dom.pl.capex.value = formatNumber(levelInfo.unitCapex);
+      dom.pl.capex.value = formatNumber(effectiveUnitCapex);
   }
 
   function updateOpexUI(pnl, level) {
@@ -1362,7 +1533,8 @@ function calculateAllStaff(storeCount, baseInputs, level) {
       
       dom.assumptions.levelTitle.textContent = `물류 및 ${level}레벨 가정`;
       const baseWage = gv('baseWage');
-      const calculatedWage = baseWage * 1.2;
+      const wageMultiplier = gv('wageMultiplier');
+      const calculatedWage = baseWage * wageMultiplier;
       dom.pl.calcWage.value = formatNumber(Math.round(calculatedWage));
 
       // B-Level Savings
@@ -1490,7 +1662,8 @@ function calculateAllStaff(storeCount, baseInputs, level) {
     const totalEbitda = totalRev - totalVar - totalStoreFixed - centralSupportWages - washingLabor - patrolLabor;
     
     const hqCapex = calculateTotalHqCapex(storeCount, pnl.allStaff.total);
-    const storesTotalCapex = automationLevels[level].unitCapex * storeCount;
+    const effectiveUnitCapex = getEffectiveUnitCapex(level);
+    const storesTotalCapex = effectiveUnitCapex * storeCount;
     const totalCapex = (storesTotalCapex + hqCapex.total) * 1.05;
     
     const paybackYears = totalEbitda > 0 ? (totalCapex / totalEbitda) : NaN;
@@ -1587,7 +1760,10 @@ function calculateAllStaff(storeCount, baseInputs, level) {
 
     dom.modal.title.textContent = details.title;
     
-    let html = '<h4>장비 내역</h4><ul>';
+    let html = '<button id="ai_equipment_recommendation_btn" class="btn">🤖 AI 추천 장비 보기</button>';
+    html += '<div id="ai_recommendation_results"></div>';
+    
+    html += '<h4>장비 내역</h4><ul>';
     let equipmentTotal = 0;
     details.equipment.forEach(e => {
         html += `<li>${e.item}: ${KRW(e.cost)}</li>`;
@@ -1609,31 +1785,128 @@ function calculateAllStaff(storeCount, baseInputs, level) {
 
     dom.modal.body.innerHTML = html;
     dom.modal.backdrop.style.display = 'block';
+    
+    // Add listener to the newly created button
+    document.getElementById('ai_equipment_recommendation_btn').addEventListener('click', () => {
+        fetchAiEquipmentRecommendations(level);
+    });
   }
 
   function hideCapexModal() {
       dom.modal.backdrop.style.display = 'none';
   }
-  
-  function updateApiKeyUIState() {
-      const savedKey = localStorage.getItem('geminiApiKey');
-      if (savedKey) {
-          dom.apiKeyInput.value = savedKey;
-          dom.apiKeyEntryContainer.style.display = 'none';
-          dom.apiKeySavedContainer.style.display = 'block';
-      } else {
-          dom.apiKeyEntryContainer.style.display = 'block';
-          dom.apiKeySavedContainer.style.display = 'none';
-      }
-  }
+
+  async function fetchAiEquipmentRecommendations(level) {
+    const btn = document.getElementById('ai_equipment_recommendation_btn');
+    const resultsContainer = document.getElementById('ai_recommendation_results');
+    if (!btn || !resultsContainer) return;
+
+    btn.disabled = true;
+    btn.textContent = '🤖 AI가 추천 장비를 찾는 중...';
+    resultsContainer.innerHTML = '<p>AI가 시장 데이터를 분석하여 추천 제품을 찾고 있습니다. 잠시만 기다려주세요...</p>';
+    
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        alert('Gemini API 키가 Vercel 환경 변수에 설정되지 않았습니다.');
+        btn.disabled = false;
+        btn.textContent = '🤖 AI 추천 장비 보기';
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: apiKey });
+        const equipmentList = capexDetails[level].equipment.map(e => `- ${e.item}`).join('\n');
+        
+        const prompt = `
+            You are a procurement specialist for a South Korean restaurant franchise. Your task is to recommend specific, commercially available equipment models and provide useful URLs for purchasing or research.
+
+            For the automation level '${automationLevels[level].name}', and based on the following list of required equipment, please find real-world product recommendations.
+
+            Required Equipment List:
+            ${equipmentList}
+
+            For each item in the list, provide:
+            1.  A plausible, specific product model name (e.g., "Hanyoung HDF-162E", "Lincat F-10").
+            2.  A highly specific and useful URL. **Your first priority is a direct product page** on a major South Korean e-commerce site (Coupang, Gmarket, Naver Shopping, 11st) or the manufacturer's official site. 
+            3.  **If and only if a direct product link is absolutely unavailable**, provide a Naver Shopping search URL that includes the **specific recommended model name** you generated (e.g., \`https://search.shopping.naver.com/search/all?query=Hanyoung+HDF-162E\`).
+            4.  **CRITICAL: Do NOT provide lazy, generic search queries** like 'smart locker' or 'heated locker'. The user finds this unhelpful. The URL must be for the specific model you recommend.
+
+            Provide the output as a single, valid JSON object with the specified structure. Do not include any other text or markdown formatting.
+        `;
+
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                recommendations: {
+                    type: Type.ARRAY,
+                    description: "List of equipment recommendations.",
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            item_name: { type: Type.STRING, description: "Original name of the equipment item from the list." },
+                            recommended_model: { type: Type.STRING, description: "A specific, real-world model name." },
+                            url: { type: Type.STRING, description: "A useful and specific URL for purchasing or researching the model." }
+                        },
+                        required: ["item_name", "recommended_model", "url"]
+                    }
+                }
+            }
+        };
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: schema
+            }
+        });
+
+        const aiData = JSON.parse(response.text);
+
+        let resultsHtml = '<h4>AI 추천 장비 목록</h4>';
+        resultsHtml += '<table><thead><tr><th>항목</th><th>추천 모델</th><th>구매/검색 링크</th></tr></thead><tbody>';
+
+        if (aiData.recommendations && aiData.recommendations.length > 0) {
+            aiData.recommendations.forEach(rec => {
+                resultsHtml += `
+                    <tr>
+                        <td>${rec.item_name}</td>
+                        <td>${rec.recommended_model}</td>
+                        <td><a href="${rec.url}" target="_blank" rel="noopener noreferrer">보러가기</a></td>
+                    </tr>
+                `;
+            });
+        } else {
+            resultsHtml += '<tr><td colspan="3">추천 장비를 찾을 수 없습니다.</td></tr>';
+        }
+
+        resultsHtml += '</tbody></table>';
+        resultsContainer.innerHTML = resultsHtml;
+
+    } catch (error) {
+        console.error("AI Equipment Fetch Error:", error);
+        resultsContainer.innerHTML = '<p style="color:var(--rose);">장비 추천을 받아오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🤖 AI 추천 장비 다시 보기';
+    }
+}
+
 
   async function fetchAiParameters() {
     dom.aiParamsBtn.disabled = true;
     dom.aiParamsBtn.textContent = '🤖 AI 파라미터 적용 중...';
 
-    const apiKey = dom.apiKeyInput.value.trim();
+    // Capture "before" state using fallback logic
+    const baseInputsBefore = getCurrentBaseInputs();
+    state.beforeAiStaff = calculateAllStaff(state.storeCount, baseInputsBefore, getAutomationLevel(state.storeCount), true); // force fallback
+
+    const apiKey = process.env.API_KEY;
+
     if (!apiKey) {
-        alert('Gemini API 키를 입력해주세요.');
+        alert('Gemini API 키가 Vercel 환경 변수에 설정되지 않았습니다. Vercel 프로젝트 대시보드에서 API_KEY를 설정해주세요.');
         dom.aiParamsBtn.disabled = false;
         dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
         return;
@@ -1643,12 +1916,39 @@ function calculateAllStaff(storeCount, baseInputs, level) {
         const ai = new GoogleGenAI({ apiKey: apiKey });
         
         const prompt = `
-            You are an expert financial analyst for franchise business models in South Korea.
-            Provide realistic estimates for:
-            1. COGS (Cost of Goods Sold) discount rates based on the bulk purchasing power of a franchise network.
-            2. Average monthly salaries in KRW for key roles in a central support and corporate office structure.
+            You are an expert financial and HR analyst for a specialized South Korean fried chicken franchise.
 
+            Business Model Context:
+            - **Store Model**: Small, under 10 pyeong (~33 sqm), delivery-only outlets in low-cost 'C-level' back-alley locations.
+            - **Product Process**: A central factory pre-processes chicken (3rd powdering, 1st fry). Stores only perform a final 2nd fry and add sauce/seasoning.
+            - **Logistics (3PL)**: Extremely simplified model, similar to a parcel delivery service. The process is: pick up pre-packaged goods (processed chicken, boxes, service items) from the central factory, store them at a warehouse, and perform regular scheduled deliveries to individual stores. There is NO processing, sorting, or complex logistics at the 3PL facility.
+            - **Side Menus**: Typical Korean side dishes like tteokbokki or jeon (savory pancakes).
+            - **Control Center Roles**: The control center is the operational hub. Its roles evolve with the automation level:
+                - **Level C/B**: The focus is on reactive support and supervision. Staff primarily handle remote Customer Service (CS), manage delivery platform listings, and provide remote technical support.
+                - **Level A**: The model shifts to proactive, fully unmanned store support. Staff manage centralized washing/prep and remotely oversee opening/closing procedures, in addition to CS and tech support.
+            
+            **Staffing Analysis Context (for reference at 1,000 stores):**
+            - This is the current, potentially inefficient, staffing model for a 1,000-store operation. Your primary task is to analyze this structure and propose a more efficient, optimized staffing model for the requested store count below.
+            - **Total**: 82 staff
+            - **Breakdown**:
+              - **HQ**: 43 total (1 Director, 22 Corporate Support, 20 CS)
+              - **Regional**: 5 Hub Managers
+              - **Tech Support**: 9 specialists
+              - **Patrol Staff**: 25 field staff (for Level B/A)
+
+            Based on a franchise scale of ${state.storeCount} stores and the specific business model above, provide realistic, industry-average estimates for the financial parameters AND **propose an optimized, efficient number of central staff.**
+            
+            **Your primary task is to propose the optimal number of staff for each central role.** Do not just copy the reference numbers. Analyze the current store count (${state.storeCount}) and the business's operational model to determine the *ideal, lean* numbers for 'corporate', 'cs', and 'techSupport' staff. The goal is efficiency and scalability.
+            
             Provide the output as a single, valid JSON object with the specified structure. Do not include any other text or markdown formatting.
+            
+            Parameter-specific instructions:
+            - **centerStaffSalaries**: Reflect the complex and evolving roles within the control center. Provide appropriate monthly salaries in KRW.
+            - **pnlInputs.procCost**: Reflect only the final 2nd fry and saucing process. Reference: one 18-liter can of cooking oil is used for 60 chickens. Factor in oil, sauces, and seasonings. **CRITICAL: The final value MUST NOT exceed 1,500 KRW.**
+            - **pnlInputs.serviceCost**: Base this on the average cost of typical Korean side dishes.
+            - **pnlInputs.avgRent**: CRITICAL: This must reflect the very low rent of a small (under 10 pyeong / 33sqm), delivery-only store in a non-prime, back-alley 'C-level' commercial area.
+            - **pnlInputs.wageMultiplier**: Propose a realistic wage multiplier to apply to the legal minimum wage (10,030 KRW). This should create a competitive market wage. (e.g., 1.1 for 110%, 1.2 for 120%). This value is a multiplier, NOT the final wage.
+            - **pnlInputs.threePlRate**: This must be a LOW percentage of COGS, reflecting the highly simplified, parcel-delivery-like logistics model described above.
         `;
 
         const schema = {
@@ -1657,6 +1957,18 @@ function calculateAllStaff(storeCount, baseInputs, level) {
             cogsDiscountTiers: {
               type: Type.ARRAY,
               description: "Discount tiers based on number of stores.",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  threshold: { type: Type.NUMBER, description: "Number of stores to trigger discount." },
+                  discount: { type: Type.NUMBER, description: "Discount rate as a decimal (e.g., 0.02 for 2%)." }
+                },
+                required: ["threshold", "discount"]
+              }
+            },
+            capexDiscountTiers: {
+              type: Type.ARRAY,
+              description: "Equipment CAPEX discount tiers based on number of stores due to purchasing power.",
               items: {
                 type: Type.OBJECT,
                 properties: {
@@ -1676,9 +1988,54 @@ function calculateAllStaff(storeCount, baseInputs, level) {
                 techSupport: { type: Type.NUMBER, description: "Salary for a technical support/equipment maintenance specialist." }
               },
               required: ["head", "corporate", "cs", "techSupport"]
+            },
+            staffing: {
+              type: Type.OBJECT,
+              description: "Optimal number of central staff based on store count and operational complexity.",
+              properties: {
+                corporate: { type: Type.NUMBER, description: "Number of general corporate/back-office staff (finance, marketing, etc.)." },
+                cs: { type: Type.NUMBER, description: "Number of Customer Service representatives." },
+                techSupport: { type: Type.NUMBER, description: "Number of technical support specialists for remote diagnostics and field coordination." }
+              },
+              required: ["corporate", "cs", "techSupport"]
+            },
+            capexFactors: {
+              type: Type.OBJECT,
+              description: "Factors for calculating central CAPEX.",
+              properties: {
+                hqCapexTiers: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      threshold: { type: Type.NUMBER, description: "Total staff count threshold." },
+                      cost: { type: Type.NUMBER, description: "Base CAPEX cost for HQ office." }
+                    }
+                  }
+                },
+                regionalCenterBaseCapex: { type: Type.NUMBER, description: "Base CAPEX per regional hub." },
+                perEmployeeCapex: { type: Type.NUMBER, description: "Additional CAPEX per central employee." }
+              },
+              required: ["hqCapexTiers", "regionalCenterBaseCapex", "perEmployeeCapex"]
+            },
+            pnlInputs: {
+              type: Type.OBJECT,
+              description: "Industry-average values for P&L inputs.",
+              properties: {
+                procCost: { type: Type.NUMBER, description: "In-store processing cost per unit." },
+                pkgCost: { type: Type.NUMBER, description: "Packaging and service menu cost per unit." },
+                serviceCost: { type: Type.NUMBER, description: "Side menu cost per unit." },
+                platformFeeRate: { type: Type.NUMBER, description: "Average delivery platform fee as a decimal." },
+                avgRent: { type: Type.NUMBER, description: "Average monthly rent for a delivery-focused store." },
+                utilitiesRate: { type: Type.NUMBER, description: "Utilities and consumables rate as a percentage of revenue." },
+                wageMultiplier: { type: Type.NUMBER, description: "Competitive wage multiplier to apply to the base minimum wage." },
+                threePlRate: { type: Type.NUMBER, description: "Third-party logistics cost as a percentage of COGS as a decimal." },
+                automationSavingsRateB: { type: Type.NUMBER, description: "Labor savings rate for Level B automation as a decimal." }
+              },
+              required: ["procCost", "pkgCost", "serviceCost", "platformFeeRate", "avgRent", "utilitiesRate", "wageMultiplier", "threePlRate", "automationSavingsRateB"]
             }
           },
-          required: ["cogsDiscountTiers", "centerStaffSalaries"]
+          required: ["cogsDiscountTiers", "capexDiscountTiers", "centerStaffSalaries", "staffing", "capexFactors", "pnlInputs"]
         };
 
         const response = await ai.models.generateContent({
@@ -1692,10 +2049,60 @@ function calculateAllStaff(storeCount, baseInputs, level) {
         
         const aiData = JSON.parse(response.text);
         
-        if (aiData.cogsDiscountTiers && aiData.centerStaffSalaries) {
+        if (aiData.cogsDiscountTiers && aiData.capexDiscountTiers && aiData.centerStaffSalaries && aiData.capexFactors && aiData.pnlInputs && aiData.staffing) {
+            clearAiHighlightsAndDefaults();
+            
+            const originalValues = {};
+            aiHighlightableInputs.forEach(key => {
+                if (dom.pl[key]) {
+                    originalValues[key] = dom.pl[key].value;
+                }
+            });
+
+            // Add a hard cap on procCost
+            if (aiData.pnlInputs.procCost > 1500) {
+                aiData.pnlInputs.procCost = 1500;
+            }
+
             state.aiParams = aiData;
-            localStorage.setItem('geminiApiKey', apiKey);
-            updateApiKeyUIState();
+            state.aiParamsApplied = true;
+            
+            // Apply P&L inputs to the UI and add highlight class
+            const pnl = aiData.pnlInputs;
+            dom.pl.procCost.value = formatNumber(pnl.procCost);
+            dom.pl.pkgCost.value = formatNumber(pnl.pkgCost);
+            dom.pl.serviceCost.value = formatNumber(pnl.serviceCost);
+            dom.pl.pf.value = pnl.platformFeeRate;
+            dom.pl.rent.value = formatNumber(pnl.avgRent);
+            dom.pl.utilRate.value = pnl.utilitiesRate;
+            dom.pl.wageMultiplier.value = pnl.wageMultiplier;
+            dom.pl.threePlRate.value = pnl.threePlRate;
+            dom.pl.bSavings.value = pnl.automationSavingsRateB;
+            
+            aiHighlightableInputs.forEach(key => {
+                if(dom.pl[key]) {
+                    const inputEl = dom.pl[key];
+                    const labelEl = inputEl.parentElement;
+                    if (!labelEl || labelEl.tagName !== 'LABEL') return;
+
+                    inputEl.classList.add('ai-applied');
+                    
+                    // Add default value display
+                    const displaySpan = document.createElement('span');
+                    displaySpan.className = 'default-value-display';
+                    displaySpan.textContent = `(기본값: ${originalValues[key]})`;
+                    labelEl.appendChild(displaySpan);
+
+                    // Add reasoning note
+                    if (aiReasoningMap[key]) {
+                        const reasoningDiv = document.createElement('div');
+                        reasoningDiv.className = 'ai-reasoning-note';
+                        reasoningDiv.textContent = aiReasoningMap[key];
+                        labelEl.appendChild(reasoningDiv);
+                    }
+                }
+            });
+
             alert('AI 추천 파라미터가 성공적으로 적용되었습니다.');
             updateAllUI();
         } else {
@@ -1704,7 +2111,8 @@ function calculateAllStaff(storeCount, baseInputs, level) {
 
     } catch (error) {
         console.error("AI Parameter Fetch Error:", error);
-        alert('AI 파라미터 적용 중 오류가 발생했습니다. API 키가 올바른지 확인해주세요.');
+        alert('AI 파라미터 적용 중 오류가 발생했습니다. Vercel에 설정된 API 키가 올바른지 확인해주세요.');
+        state.beforeAiStaff = null; // Clear before-state on error
     } finally {
         dom.aiParamsBtn.disabled = false;
         dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
@@ -1716,6 +2124,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
   function setupEventListeners() {
     dom.storeSlider.addEventListener('input', (e) => {
       state.forcedLevel = null; // Revert to auto mode when slider is used
+      resetAiState();
       const storeCount = mapSliderToStoreCount(e.target.value);
       if (storeCount !== state.storeCount) {
         state.storeCount = storeCount;
@@ -1725,12 +2134,6 @@ function calculateAllStaff(storeCount, baseInputs, level) {
 
     dom.applyChangesBtn.addEventListener('click', updateAllUI);
     dom.aiParamsBtn.addEventListener('click', fetchAiParameters);
-    
-    dom.changeApiKeyBtn.addEventListener('click', () => {
-        localStorage.removeItem('geminiApiKey');
-        dom.apiKeyInput.value = '';
-        updateApiKeyUIState();
-    });
     
     Object.entries(dom.forceLevelButtons).forEach(([key, btn]) => {
         btn.addEventListener('click', () => {
@@ -1746,7 +2149,7 @@ function calculateAllStaff(storeCount, baseInputs, level) {
         if (!input.readOnly) {
            input.addEventListener('blur', (e) => {
               const val = parseFormattedNumber(e.target.value);
-              if (!isNaN(val) && e.target.id !== 'pl_pf' && e.target.id !== 'pl_util_rate' && e.target.id !== 'pl_3pl_rate' && e.target.id !== 'pl_b_savings' && e.target.id !== 'pl_patrol_wage' && e.target.id !== 'pl_washing_wage' && e.target.id !== 'hq_margin_rate' ) {
+              if (!isNaN(val) && e.target.id !== 'pl_pf' && e.target.id !== 'pl_util_rate' && e.target.id !== 'pl_3pl_rate' && e.target.id !== 'pl_b_savings' && e.target.id !== 'pl_patrol_wage' && e.target.id !== 'pl_washing_wage' && e.target.id !== 'hq_margin_rate' && e.target.id !== 'pl_wage_multiplier' ) {
                  e.target.value = formatNumber(val);
               }
            });
@@ -1771,14 +2174,13 @@ function calculateAllStaff(storeCount, baseInputs, level) {
     allInputs.forEach(input => {
         if (!input.readOnly) {
            const val = parseFormattedNumber(input.value);
-            if (!isNaN(val) && input.id !== 'pl_pf' && input.id !== 'pl_util_rate' && input.id !== 'pl_3pl_rate' && input.id !== 'pl_b_savings' && input.id !== 'pl_patrol_wage' && input.id !== 'pl_washing_wage' && input.id !== 'hq_margin_rate' ) {
+            if (!isNaN(val) && input.id !== 'pl_pf' && input.id !== 'pl_util_rate' && input.id !== 'pl_3pl_rate' && input.id !== 'pl_b_savings' && input.id !== 'pl_patrol_wage' && input.id !== 'pl_washing_wage' && input.id !== 'hq_margin_rate' && input.id !== 'pl_wage_multiplier' ) {
              input.value = formatNumber(val);
             }
         }
     });
 
     setupEventListeners();
-    updateApiKeyUIState();
     updateAllUI();
   });
 </script>
