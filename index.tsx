@@ -1612,10 +1612,7 @@ function calculateAllStaff(storeCount: number, baseInputs: any, level: 'A' | 'B'
     if (!API_KEY || API_KEY.includes("붙여넣으세요")) {
         dom.aiParamsBtn.disabled = true;
         dom.aiParamsBtn.textContent = 'API 키를 설정해주세요';
-    } else {
-        // Programmatically trigger the AI parameter fetch on load to simulate the user's request.
-        await fetchAiParameters();
-    }
+    } 
     
     updateAllUI();
   });
