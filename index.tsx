@@ -1,6 +1,8 @@
 // FIX: Updated import to use package name as per guidelines.
 import { GoogleGenAI, Type } from "@google/genai";
 
+const API_KEY = "AIzaSyDDgIyq1naLE9Iv6AV_pYhzVgj6VZZXTiI"; // 👈 PASTE YOUR API KEY HERE
+
   // --- SIMULATED AI RESPONSE ---
   // This object simulates a high-quality response from the Gemini API,
   // allowing the application to load into the "AI Applied" state.
@@ -1186,21 +1188,19 @@ function calculateAllStaff(storeCount: number, baseInputs: any, level: 'A' | 'B'
     const resultsContainer = document.getElementById('ai_recommendation_results');
     if (!btn || !resultsContainer) return;
 
+    if (!API_KEY || API_KEY.includes("붙여넣으세요")) {
+        btn.disabled = true;
+        btn.textContent = 'API 키를 설정해주세요';
+        return;
+    }
+
     btn.disabled = true;
     btn.textContent = '🤖 AI가 추천 장비를 찾는 중...';
     resultsContainer.innerHTML = '<p>AI가 B2B 시장 데이터를 분석하여 실제 판매처를 찾고 있습니다. 잠시만 기다려주세요...</p>';
     
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        console.error('API key not found');
-        btn.disabled = false;
-        btn.textContent = '🤖 AI 추천 장비 보기';
-        resultsContainer.innerHTML = '<p style="color:var(--rose);">API 키가 설정되지 않았습니다.</p>';
-        return;
-    }
 
     try {
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const equipmentList = capexDetails[level].equipment.map(e => `- ${e.item}`).join('\n');
         
         const prompt = `
@@ -1267,7 +1267,7 @@ function calculateAllStaff(storeCount: number, baseInputs: any, level: 'A' | 'B'
             }
         });
 
-        const aiData = JSON.parse(response.text.trim());
+        const aiData = JSON.parse(response.text);
 
         let resultsHtml = `
             <h4>AI 추천 장비 목록</h4>
@@ -1316,6 +1316,12 @@ function calculateAllStaff(storeCount: number, baseInputs: any, level: 'A' | 'B'
   async function fetchAiParameters() {
     dom.aiParamsBtn.disabled = true;
     dom.aiParamsBtn.textContent = '🤖 AI 파라미터 적용 중...';
+    
+    if (!API_KEY || API_KEY.includes("붙여넣으세요")) {
+        dom.aiParamsBtn.disabled = true;
+        dom.aiParamsBtn.textContent = 'API 키를 설정해주세요';
+        return;
+    }
 
     // Capture "before" state
     const baseInputsBefore = getCurrentBaseInputs();
@@ -1329,16 +1335,8 @@ function calculateAllStaff(storeCount: number, baseInputs: any, level: 'A' | 'B'
     state.beforeAiStaff = pnlBefore.allStaff;
 
 
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        console.error('API key not found');
-        dom.aiParamsBtn.disabled = false;
-        dom.aiParamsBtn.textContent = '🤖 AI 추천 파라미터 적용';
-        return;
-    }
-
     try {
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         
         const prompt = `
             You are a meticulous financial and HR analyst at a top-tier consulting firm. Your analysis must be rigorous, data-driven, and reflect deep market knowledge. Your reputation depends on the accuracy and logical consistency of your recommendations.
@@ -1457,8 +1455,7 @@ function calculateAllStaff(storeCount: number, baseInputs: any, level: 'A' | 'B'
           }
         });
         
-        // FIX: Added .trim() to handle potential whitespace in the API response.
-        const aiData = JSON.parse(response.text.trim());
+        const aiData = JSON.parse(response.text);
         
         // This structural check is now the primary gatekeeper
         if (aiData.pnlParameters && Array.isArray(aiData.pnlParameters) && aiData.pnlParameters.length > 0) {
@@ -1610,8 +1607,15 @@ function calculateAllStaff(storeCount: number, baseInputs: any, level: 'A' | 'B'
     });
 
     setupEventListeners();
-    updateAllUI();
     
-    // Programmatically trigger the AI parameter fetch on load to simulate the user's request.
-    await fetchAiParameters();
+    // Check for API Key on load and disable buttons if not present.
+    if (!API_KEY || API_KEY.includes("붙여넣으세요")) {
+        dom.aiParamsBtn.disabled = true;
+        dom.aiParamsBtn.textContent = 'API 키를 설정해주세요';
+    } else {
+        // Programmatically trigger the AI parameter fetch on load to simulate the user's request.
+        await fetchAiParameters();
+    }
+    
+    updateAllUI();
   });
