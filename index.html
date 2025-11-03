@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>딱마리치킨 | 스케일업 시뮬레이터</title>
 <link rel="stylesheet" href="/index.css">
@@ -18,22 +18,28 @@
   <header>
     <div>
       <h1>딱마리치킨 ─ 스케일업 시뮬레이터</h1>
-      <div class="sub">현 단계: <b>Level C 매장 10개 + 관제센터 1곳</b> · 장기: <b>C → B → A</b> 단계 고도화</div>
+      <div class="sub">현 단계: <b id="header_current_stage">Level C 매장 10개 + 관제센터 1곳</b> · 장기: <b>C → B → A</b> 단계 고도화</div>
     </div>
-    <span class="tag">임원용 요약</span>
-    <span class="tag">실시간 미리보기</span>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button id="open_equip_modal_btn" class="btn btn-secondary">⚙️ 장비 구성 & CAPEX 상세</button>
+      <span class="tag">임원용 요약</span>
+      <span class="tag">실시간 미리보기</span>
+    </div>
   </header>
 
   <nav>
     <a href="#simulator">시뮬레이터</a>
-    <a href="#one">결론</a>
-    <a href="#capex">예산</a>
-    <a href="#opex">OPEX</a>
-    <a href="#pnl">단위 P&L</a>
-    <a href="#total-pnl">총괄 P&L</a>
-    <a href="#hq-pnl">본사 P&L</a>
-    <a href="#scenario">비교 분석</a>
-    <a href="#roadmap">로드맵</a>
+    <a href="#one">① 결론</a>
+    <a href="#capex">② 예산</a>
+    <a href="#opex">③ OPEX</a>
+    <a href="#sop_fry">④ SOP</a>
+    <a href="#capacity_plan">④-1 CAPA</a>
+    <a href="#staffing_peak">④-2 인력</a>
+    <a href="#pnl">⑤ 단위 P&L</a>
+    <a href="#total-pnl">⑤-1 총괄</a>
+    <a href="#hq-pnl">⑤-2 본사</a>
+    <a href="#scenario">⑥ 비교</a>
+    <a href="#roadmap">⑦ 로드맵</a>
   </nav>
 
   <!-- 스케일업 시뮬레이터 -->
@@ -135,7 +141,7 @@
       <div class="card"><div class="k">컨틴전시(5%)</div><div class="v" id="capex_contingency">₩25,674,680</div></div>
     </div>
     <div class="card" style="margin-top:10px"><div class="k">패키지 CAPEX 합계</div><div class="v" id="capex_total">₩539,168,280</div><div class="k">부가세·운송·전기·덕트·소방 연동 별도</div></div>
-    <div class="note"><b>주석</b> — CAPEX: 초기 설비투자 / 컨틴전시: 예비비(5%) / <b>본사/거점 CAPEX 산출</b>: 본사 규모별 구성비 + (지역 거점 수 × 거점당 구성비) + (1인당 세팅비 × 총 인원 수)로 계산됩니다.</div>
+    <div class="note" id="capex_note"><b>주석</b> — CAPEX: 초기 설비투자 / 컨틴전시: 예비비(5%) / <b>본사/거점 CAPEX 산출</b>: 본사 규모별 구성비 + (지역 거점 수 × 거점당 구성비) + (1인당 세팅비 × 총 인원 수)로 계산됩니다.</div>
   </section>
 
   <!-- OPEX -->
@@ -148,17 +154,206 @@
         <tr id="opex_labor_row"><td>인건비(인상 시급 기준)</td><td id="opex_labor_desc">13h/일 × 30일 × 12,384원 × 1.2명</td><td id="opex_labor_cost">₩5,763,744</td></tr>
         <tr id="opex_rent_row"><td>임대료(관리비포함/월)</td><td>고정</td><td id="opex_rent_cost">₩1,000,000</td></tr>
         <tr id="opex_saas_row"><td>POS·인터넷(월)</td><td>고정</td><td id="opex_saas_cost">₩150,000</td></tr>
-        <tr id="opex_center_row"><td>센터 서비스(점포 몫)</td><td id="opex_center_desc">CS, 배달플랫폼 관리, 기술지원</td><td id="opex_center_cost">₩3,790,000</td></tr>
+        <tr id="opex_rental_row" style="display: none;"><td>로봇 렌탈료</td><td>월 고정</td><td id="opex_rental_cost">-</td></tr>
+        <tr id="opex_center_row"><td>센터 서비스(점포 몫)</td><td id="opex_center_desc">CS, 플랫폼 관리, 기술지원</td><td id="opex_center_cost">₩3,790,000</td></tr>
         <tr><th>합계(1점포)</th><th></th><th id="opex_total">₩10,703,744</th></tr>
       </tbody>
     </table>
     <div class="note"><b>주석</b> — OPEX: 월 운영비 / FTE: Full‑Time Equivalent(상근 인력 환산)</div>
   </section>
 
+  <!-- 튀김 SOP 생산성 -->
+  <section id="sop_fry" class="sec-indigo tint">
+    <div class="secbar"></div>
+    <h2 class="accentL">④ 튀김 SOP 생산성 (1대 기준) <span class="pill">Indigo</span></h2>
+    <div class="card">
+        <div class="k" style="font-weight: bold; text-align: center; margin-bottom: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 12px;">
+            SOP 원칙: "한 마리는 한 대의 튀김기에서만 처리(중복 사용 금지)"
+        </div>
+        <div class="grid g-2">
+            <div>
+                <label>튀김 시간(분) <input id="sop_fry_time_min" type="text" value="5" readonly/></label>
+                <label>기름 드립 시간(초) <input id="sop_drip_time_sec" type="text" value="45"/></label>
+                <label>이동/탈지 택타임(초) <input id="sop_transfer_time_sec" type="text" value="15"/></label>
+                <label>변동성 버퍼(0~1) <input id="sop_safety_buffer_pct" type="text" value="0.15"/></label>
+            </div>
+            <div>
+                <div class="lead" style="font-size: 16px; margin-bottom: 8px;">계산식</div>
+                <div id="sop_formula_display" class="k" style="font-size: 14px; line-height: 1.6; background: var(--chip); padding: 8px; border-radius: 8px; border: 1px solid var(--line);">
+                    <!-- Dynamic formula here -->
+                </div>
+            </div>
+        </div>
+        <div class="lead" style="margin-top: 16px; font-size: 16px;">산출 결과</div>
+        <div class="kpiBar" style="margin-top: 8px;">
+            <span class="chip">유효 사이클타임: <b id="sop_cycle_time">-</b></span>
+            <span class="chip">1대 처리량: <b id="sop_capacity_h">-</b></span>
+            <span class="chip">버퍼 반영 처리량: <b id="sop_buffered_capacity_h">-</b></span>
+            <span class="chip" style="background-color: var(--indigo); color: var(--bg);">→ 권장 튀김기: <b id="sop_ref_fryers">-</b></span>
+        </div>
+    </div>
+  </section>
+
+  <!-- 매장 캐파 설계 -->
+  <section id="capacity_plan" class="sec-indigo tint">
+      <div class="secbar"></div>
+      <h2 class="accentL">④-1 매장 캐파(CAPA) 설계 <span class="pill">Indigo</span></h2>
+      <div class="card">
+          <div class="grid g-2">
+              <div>
+                  <div class="lead" style="font-size: 16px; margin-bottom: 8px;">입력값</div>
+                  <label>목표 월매출(원) <input id="cap_target_rev" type="text" value="60000000"/></label>
+                  <label>객단가 AOV(원) <input id="cap_aov" type="text" value="22,900" readonly/></label>
+                  <label>월 영업일수 <input id="cap_days" type="text" value="30"/></label>
+                  <label>피크타임 주문 집중률(0~1) <input id="cap_peak_share" type="text" value="0.75"/></label>
+                  <label>피크타임 시간(h) <input id="cap_peak_window" type="text" value="2"/></label>
+              </div>
+              <div>
+                  <div class="lead" style="font-size: 16px; margin-bottom: 8px;">참조 및 장비 선택</div>
+                  <label>버퍼 반영 처리량(마리/시간)
+                      <div id="cap_ref_capacity" class="k readonly-ref">-</div>
+                  </label>
+                   <label>튀김기 장비 선택
+                      <select id="cap_fryer_type">
+                          <option value="1">1-바스켓 (1슬롯)</option>
+                      </select>
+                   </label>
+              </div>
+          </div>
+
+          <div id="cap_warning_banner" class="note" style="display:none; background: rgba(251, 113, 133, 0.15); border-color: var(--rose); color: var(--rose); margin-top: 16px;">
+              <b>경고:</b> 튀김기 1대 운영 시, 피크 시간대 주문(15건/h 초과)이 몰려 고객 대기 시간이 길어질 위험이 있습니다.
+          </div>
+
+          <div class="lead" style="margin-top: 16px; font-size: 16px;">산출 결과</div>
+          <div class="kpiBar" style="margin-top: 8px;">
+              <span class="chip">일 주문량(추정): <b id="cap_req_units_day">-</b></span>
+              <span class="chip">피크 수요: <b id="cap_peak_orders_h">-</b></span>
+              <span class="chip">필요 튀김기(슬롯): <b id="cap_fryer_slots_needed">-</b></span>
+              <span class="chip">권장 장비 수(대): <b id="cap_fryer_devices_needed">-</b></span>
+              <span class="chip">권장 튀김기: <b id="cap_reco_devices">-</b></span>
+              <span class="chip">합계 CAPEX: <b id="cap_total_capex">-</b></span>
+          </div>
+          <div class="note" id="cap_example">
+              <b>예시)</b> 객단가 17,900원, 목표 6천만, 30일, 피크 75% 기준 → 일 주문량 ≈ 112, 피크 ≈ 42/h → 버퍼 처리량 8.5/h 기준 필요 슬롯 = ceil(42/8.5) = 5개
+          </div>
+          
+          <button id="cap_diagnose_btn" class="btn" style="width: 100%; margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px;">🎯 목표 6천 진단</button>
+
+          <div id="cap_diagnosis_results" style="display: none; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 16px;">
+              
+              <div class="tabs">
+                  <input type="radio" id="tab1" name="diag_tabs" checked>
+                  <label for="tab1">1차: 현장 충족</label>
+                  <input type="radio" id="tab2" name="diag_tabs">
+                  <label for="tab2">2차: 시장 적합성</label>
+              </div>
+              
+              <div id="diag_tab1_content" class="tab-content">
+                  <div class="grid g-2">
+                        <div>
+                            <div class="lead" style="font-size: 16px; margin-bottom: 8px;">요구사항</div>
+                            <label>일 주문량 (추정) <div class="readonly-ref" id="diag_req_units_day">-</div></label>
+                            <label>피크 시간당 수요 <div class="readonly-ref" id="diag_peak_orders_h">-</div></label>
+                            <label>필요 튀김 슬롯 <div class="readonly-ref" id="diag_req_fryer_slots">-</div></label>
+                            <label>피크 총 인원 <div class="readonly-ref" id="diag_req_crew">-</div></label>
+                        </div>
+                        <div>
+                            <div class="lead" style="font-size: 16px; margin-bottom: 8px;">판정 및 조정</div>
+                            <label>보유 튀김 슬롯(개) <input type="text" id="cap_fryer_slots_owned" value="0"></label>
+                            <div id="diag_verdict_1" class="verdict-badge">-</div>
+                        </div>
+                  </div>
+                  <div class="lead" style="font-size: 16px; margin-top: 16px; margin-bottom: 8px;">원클릭 조정</div>
+                  <div class="kpiBar" id="cap_diagnosis_suggestions">
+                      <button id="sugg_aov" class="pill-btn-suggest">AOV +1,000</button>
+                      <button id="sugg_peak" class="pill-btn-suggest">피크분산 75%→65%</button>
+                      <button id="sugg_fryer" class="pill-btn-suggest">슬롯 +1</button>
+                      <button id="sugg_pack" class="pill-btn-suggest">포장시간 -10초</button>
+                      <button id="sugg_op" class="pill-btn-suggest">1인당 튀김기 +1</button>
+                  </div>
+              </div>
+              
+              <div id="diag_tab2_content" class="tab-content" style="display:none;">
+                  <div class="grid g-2">
+                    <div>
+                        <div class="lead" style="font-size: 16px; margin-bottom: 8px;">시장/배송 변수</div>
+                        <label>피크타임 가용 라이더(명)<input type="text" id="diag_riders" value="2"></label>
+                        <label>라이더 1인당 시간당 처리량(건)<input type="text" id="diag_orders_per_rider" value="2.2"></label>
+                        <label>최대 약속시간(분)<input type="text" id="diag_max_promise_min" value="35"></label>
+                        <label>주문 취소 임계율(%)<input type="text" id="diag_cancel_thresh_pct" value="3"></label>
+                    </div>
+                    <div>
+                        <div class="lead" style="font-size: 16px; margin-bottom: 8px;">시뮬레이션 결과</div>
+                        <label>주방 처리량(마리/시간)<div class="readonly-ref" id="diag_kitchen_capacity">-</div></label>
+                        <label>배송 처리량(건/시간)<div class="readonly-ref" id="diag_delivery_capacity">-</div></label>
+                        <label>예상 약속시간(분)<div class="readonly-ref" id="diag_est_promise_time">-</div></label>
+                        <label>예상 취소율(%)<div class="readonly-ref" id="diag_est_cancel_rate">-</div></label>
+                    </div>
+                  </div>
+                  <div id="diag_verdict_2" class="verdict-badge" style="margin-top: 12px;">-</div>
+              </div>
+
+              <div class="card" style="margin-top: 16px; background: var(--chip);">
+                  <div class="k">최종 판정</div>
+                  <div id="diag_final_verdict" class="v" style="font-size: 1.2em;">-</div>
+              </div>
+          </div>
+      </div>
+  </section>
+  
+  <!-- 피크 인력 산정 -->
+  <section id="staffing_peak" class="sec-indigo tint">
+      <div class="secbar"></div>
+      <h2 class="accentL">④-2 피크 인력 산정 <span class="pill">Indigo</span></h2>
+      <div class="card">
+          <div class="grid g-2">
+              <div>
+                  <div class="lead" style="font-size: 16px; margin-bottom: 8px;">SOP 상수 (입력)</div>
+                  <label>1인당 동시 관리 튀김 슬롯(개) <input id="staff_max_fryers" type="text" value="3"/></label>
+                  <label>로드/언로드 접촉시간(초) <input id="staff_load_unload_sec" type="text" value="25"/></label>
+                  <label>양념/토스 표준시간(초) <input id="staff_sauce_sec" type="text" value="30"/></label>
+                  <label>포장/라벨 표준시간(초) <input id="staff_pack_sec" type="text" value="60"/></label>
+                  <label>러너 지원시간(초) <input id="staff_runner_sec" type="text" value="15"/></label>
+              </div>
+              <div>
+                  <div class="lead" style="font-size: 16px; margin-bottom: 8px;">참조값</div>
+                  <label>필요 튀김 슬롯(개)
+                      <div id="staff_ref_fryer_slots" class="k readonly-ref">-</div>
+                  </label>
+                  <label>피크 시간당 수요(마리/시간)
+                      <div id="staff_ref_peak_orders" class="k readonly-ref">-</div>
+                  </label>
+              </div>
+          </div>
+          <div class="lead" style="margin-top: 16px; font-size: 16px;">산출 결과</div>
+          <div class="kpiBar" style="margin-top: 8px;">
+              <span class="chip">튀김 오퍼레이터: <b id="staff_out_fry_ops">-</b></span>
+              <span class="chip">소스/포장: <b id="staff_out_packers">-</b></span>
+              <span class="chip">러너(선택): <b id="staff_out_runner">-</b></span>
+              <span class="chip">피크 총 인원: <b id="staff_out_total">-</b></span>
+          </div>
+          <div class="card" style="margin-top: 16px; background: var(--chip);">
+              <div class="k">스케줄 제안</div>
+              <div id="staff_schedule" class="v" style="font-size: 1.2em;">-</div>
+          </div>
+          <div class="note" id="staff_example">
+              <b>예시)</b> 피크수요 42/h, 튀김슬롯 5개, 1인당 3슬롯 관리, 양념 30초, 포장 60초 기준 →
+              튀김 오퍼레이터 = ceil(5/3) = 2명,
+              소스/포장 인당 처리량 = 3600/90 = 40/h → 필요인원 = ceil(42/40) = 2명.
+              <b>총 4명 필요.</b>
+          </div>
+          
+          <button id="commit_ops_plan_btn" class="btn btn-commit" style="width: 100%; margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px;">
+              💾 운영 계획 확정 및 P&L 반영
+          </button>
+      </div>
+  </section>
+
   <!-- 단위 점포 손익표 (P&L) -->
   <section id="pnl" class="sec-purple tint">
     <div class="secbar"></div>
-    <h2 class="accentL">④ 단위 점포 손익표(P&L, 월) <span class="pill">Purple</span></h2>
+    <h2 class="accentL">⑤ 단위 점포 손익표(P&L, 월) <span class="pill">Purple</span></h2>
 
     <div class="grid g-2">
       <div class="card">
@@ -188,7 +383,7 @@
               <label>COGS 대비 3PL 비율(0~1) <input id="pl_3pl_rate" type="text" value="0.03" /></label>
               
               <div id="pl_b_savings_container">
-                   <label>자동화 인력 절감율 (<span id="pl_b_level_label">C레벨</span>) <input id="pl_b_savings" type="text" value="0.15" /></label>
+                   <label>자동화 인력 절감액(월) (<span id="pl_b_level_label">C레벨</span>) <input id="pl_b_savings" type="text" value="500,000" /></label>
               </div>
               
               <div id="pl_patrol_container">
@@ -202,7 +397,16 @@
               </div>
           </div>
 
-          <label>점포 CAPEX(회수기간 계산) <input id="pl_capex" type="text" value="43,949,360" readonly /></label>
+          <label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span>점포 CAPEX(회수기간 계산)</span>
+              <span class="capex-toggle">
+                <input type="checkbox" id="pl_use_custom_capex">
+                <label for="pl_use_custom_capex">장비 구성</label>
+              </span>
+            </div>
+            <input id="pl_capex" type="text" value="43,949,360" readonly />
+          </label>
           
           <div class="row" style="margin-top: 16px;"><button class="btn" id="apply_changes">입력값 최종 반영</button></div>
       </div>
@@ -245,6 +449,7 @@
           <tr><td>인건비</td><td id="pl_t_labor">-</td><td class="k" id="pl_t_labor_desc">13h/일 × 30일 × 12,384원 × 1.2명</td></tr>
           <tr><td>임대료(관리비포함/월)</td><td id="pl_t_rent">-</td><td class="k">배달전문 소형</td></tr>
           <tr><td>POS·인터넷(월)</td><td id="pl_t_saas">-</td><td class="k">POS·IOMS·모니터링</td></tr>
+          <tr id="pl_t_rental_row" style="display: none;"><td>로봇 렌탈료</td><td id="pl_t_rental">-</td><td class="k">장비 렌탈 시 발생 (OPEX)</td></tr>
           <tr><td>센터 서비스(점포 몫)</td><td id="pl_t_centerStore">-</td><td class="k" id="pl_t_centerStore_desc">세척·QA·순회</td></tr>
           <tr><td>점포 EBITDA</td><td id="pl_t_ebitda">-</td><td class="k" id="pl_t_margin" class="k">마진 -%</td></tr>
           <tr><td>손익분기점</td><td id="pl_t_bep">-</td><td class="k">일 기준(마리/일)</td></tr>
@@ -258,7 +463,7 @@
   <!-- 총괄 손익표 -->
   <section id="total-pnl" class="sec-purple tint">
     <div class="secbar"></div>
-    <h2 class="accentL">④-1 총괄 손익표 (Total P&L, 년) <span class="pill">Purple</span></h2>
+    <h2 class="accentL">⑤-1 총괄 손익표 (Total P&L, 년) <span class="pill">Purple</span></h2>
     <div class="card">
         <div class="lead">패키지 결과 요약 (년)</div>
         <div class="kpiBar">
@@ -280,6 +485,7 @@
           <tr><td>총 변동비 (COGS 제외)</td><td id="p_t_var_etc">-</td><td class="k">플랫폼, 공과금, 3PL</td></tr>
           <tr><td>총 매출이익</td><td id="p_t_cm">-</td><td class="k">총 매출 − 총 변동비</td></tr>
           <tr><td>총 고정비 (매장)</td><td id="p_t_fix_store">-</td><td class="k">(인건비, 임대료, SaaS) × 총 매장 수 × 12개월</td></tr>
+          <tr id="total_pnl_rental_row" style="display: none;"><td>총 로봇 렌탈료</td><td id="p_t_rental">-</td><td class="k">단위 점포 렌탈료 × 총 매장 수 × 12개월</td></tr>
           <tr id="total_pnl_center_wage_row"><td>본사 및 지원 인건비 (HQ+거점)</td><td id="p_t_center_wage">-</td><td class="k">본사, CS, 기술지원, 지점장 등 인건비 × 12개월</td></tr>
           <tr id="total_pnl_washing_wage_row" style="display: none;"><td>중앙 세척/소분 인건비(A레벨)</td><td id="p_t_washing_wage">-</td><td class="k">야간 근무, 월 인건비 × 12개월</td></tr>
           <tr id="total_pnl_patrol_wage_row" style="display: none;"><td>순회 관리 인건비(B/A레벨)</td><td id="p_t_patrol_wage">-</td><td class="k">순회 인력, 월 인건비 × 12개월</td></tr>
@@ -294,9 +500,15 @@
   <!-- 본사 손익표 -->
   <section id="hq-pnl" class="sec-purple tint">
     <div class="secbar"></div>
-    <h2 class="accentL">④-2 본사 가맹 사업 손익표 (가정, 년) <span class="pill">Purple</span></h2>
+    <h2 class="accentL">⑤-2 본사 가맹 사업 손익표 (가정, 년) <span class="pill">Purple</span></h2>
     <div class="card">
-        <label>본사 물류 마진율(0~1) <input id="hq_margin_rate" type="text" value="0.25" /></label>
+        <div class="lead" style="font-size: 16px;">본사 운영 가정</div>
+        <div class="grid g-2" style="margin-top: 8px;">
+          <div><label>본사 물류 마진율(0~1) <input id="hq_margin_rate" type="text" value="0.25" /></label></div>
+          <div><label>본사 임대료(월) <input id="hq_rent" type="text" value="3,000,000" /></label></div>
+          <div><label>본사 공과금/기타(월) <input id="hq_util" type="text" value="1,000,000" /></label></div>
+          <div><label>본사 SaaS/라이선스(월) <input id="hq_saas" type="text" value="500,000" /></label></div>
+        </div>
     </div>
     <div class="card" style="margin-top:10px">
       <div class="lead">본사 손익표 (년)</div>
@@ -306,9 +518,10 @@
           <tr><td>총 공급가액 (전체 매장 COGS)</td><td id="hq_t_cogs">-</td><td class="k">전체 매장에 공급된 원부자재 총액</td></tr>
           <tr><td>본사 물류 수익</td><td id="hq_t_revenue">-</td><td id="hq_t_revenue_desc" class="k">총 공급가액 × -%</td></tr>
           <tr id="hq_pnl_center_wage_row"><td>본사 및 지원 인건비 (HQ+거점)</td><td id="hq_t_center_wage">-</td><td class="k">본사, CS, 기술지원, 지점장 등 인건비 × 12개월</td></tr>
+          <tr id="hq_t_overhead_row"><td>본사 운영경비 (임대료 등)</td><td id="hq_t_overhead">-</td><td class="k">본사 사무실 임대료, 공과금, SaaS 등 × 12개월</td></tr>
           <tr id="hq_pnl_washing_wage_row" style="display: none;"><td>중앙 세척/소분 인건비(A레벨)</td><td id="hq_t_washing_wage">-</td><td class="k">야간 근무, 월 인건비 × 12개월</td></tr>
            <tr id="hq_pnl_patrol_wage_row" style="display: none;"><td>순회 관리 인건비(B/A레벨)</td><td id="hq_t_patrol_wage">-</td><td class="k">순회 인력, 월 인건비 × 12개월</td></tr>
-          <tr><td>본사 EBITDA</td><td id="hq_t_ebitda">-</td><td class="k">물류 수익 − 본사 인건비</td></tr>
+          <tr><td>본사 EBITDA</td><td id="hq_t_ebitda">-</td><td class="k">물류 수익 − 본사 총 비용</td></tr>
           <tr><td>본사 투자(센터) 회수기간</td><td id="hq_t_payback">-</td><td class="k">= 센터 CAPEX ÷ 본사 EBITDA</td></tr>
         </tbody>
       </table>
@@ -353,7 +566,7 @@
   <!-- 플로우 -->
   <section id="flow" class="sec-indigo tint">
     <div class="secbar"></div>
-    <h2 class="accentL">⑤ 운영 플로우 <span class="pill">Indigo</span></h2>
+    <h2 class="accentL">⑦ 운영 플로우 <span class="pill">Indigo</span></h2>
      <table>
       <thead><tr><th>단계</th><th>핵심</th><th>비고</th></tr></thead>
       <tbody>
@@ -372,7 +585,31 @@
   <!-- 센터 -->
   <section id="center" class="sec-teal tint">
       <div class="secbar"></div>
-      <h2 class="accentL">⑦ 관제센터 역할 <span class="pill">Teal</span></h2>
+      <h2 class="accentL">⑧ 관제센터 역할 <span class="pill">Teal</span></h2>
+      
+      <div class="card" id="center_ops_summary_card" style="margin-bottom: 12px;">
+          <div class="lead" style="font-size: 16px; margin-bottom: 8px;">일일 관제 요약</div>
+          <div class="grid g-2">
+              <div>
+                  <label>총 점포 수 <div class="readonly-ref" id="center_ref_stores">-</div></label>
+                  <label>점포별 장비 수 <div class="readonly-ref" id="center_ref_devices">-</div></label>
+                  <label>점포별 튀김 슬롯 <div class="readonly-ref" id="center_ref_slots">-</div></label>
+                  <label>점포 피크 인원 <div class="readonly-ref" id="center_ref_crew">-</div></label>
+              </div>
+              <div>
+                  <label>순회시간/점포(분) <input type="text" id="center_patrol_min" value="20"></label>
+                  <label>점포 청소·설비관리/점포(분) <input type="text" id="center_store_clean_min" value="30"></label>
+                  <label>QA·보충/점포(분) <input type="text" id="center_qa_min" value="15"></label>
+              </div>
+          </div>
+          <div class="lead" style="margin-top: 16px; font-size: 16px;">산출 결과</div>
+          <div class="kpiBar" style="margin-top: 8px;">
+              <span class="chip">센터 일일 분량: <b id="center_out_total_min">- 분</b></span>
+              <span class="chip">센터 필요 FTE: <b id="center_out_fte">- 명</b></span>
+              <span class="chip">권장 순회 타임라인: <b id="center_out_timeline">11:00-15:00</b></span>
+          </div>
+      </div>
+      
       <table>
           <thead>
               <tr>
@@ -442,7 +679,7 @@
   <!-- 규정 -->
   <section id="comp" class="sec-rose tint">
     <div class="secbar"></div>
-    <h2 class="accentL">⑧ 리스크 통제 & 컴플라이언스 <span class="pill">Rose</span></h2>
+    <h2 class="accentL">⑨ 리스크 통제 & 컴플라이언스 <span class="pill">Rose</span></h2>
      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
       <div>
           <b class="pill">위생 관리</b>
@@ -466,34 +703,37 @@
   <!-- 로드맵 -->
   <section id="roadmap" class="sec-amber tint">
     <div class="secbar"></div>
-    <h2 class="accentL">⑨ 단계적 고도화 로드맵 (A/B/C 명확화) <span class="pill">Amber</span></h2>
+    <h2 class="accentL">⑩ 단계적 고도화 로드맵 (A/B/C 명확화) <span class="pill">Amber</span></h2>
     <div class="grid g-3">
-      <div class="card">
-        <div class="lead">Level C — 최소 인력</div>
+      <div class="card" id="roadmap_card_c">
+        <div class="lead">Level C — 부분 자동화</div>
         <ul class="list" style="margin:8px 0 0 18px">
           <li>상시 1.2인 (피크 대응)</li>
           <li>프라이어 OQS/ATO/자동필터, 보온/픽업 선반, KDS</li>
           <li id="roadmap_capex_c"><b>창업원가(보증금5백만원 포함): ₩43,949,360</b></li>
           <li class="k">문제: 소스·세척 수작업, 피크 인력</li>
         </ul>
+        <div class="equip-list-container"></div>
       </div>
-      <div class="card">
-        <div class="lead">Level B — 부분 무인</div>
+      <div class="card" id="roadmap_card_b">
+        <div class="lead">Level B — 주방 자동화</div>
         <ul class="list" style="margin:8px 0 0 18px">
           <li>비피크 무인 / 순회 관리 도입</li>
           <li>스마트 픽업 락커, 정량 소스 강화</li>
           <li id="roadmap_capex_b"><b>창업원가(보증금5백만원 포함): ₩62,806,388</b></li>
           <li class="k">문제: 락커 CAPEX·공간·온도 스펙 편차</li>
         </ul>
+        <div class="equip-list-container"></div>
       </div>
-      <div class="card">
-        <div class="lead">Level A — 영업시간 완전 무인</div>
+      <div class="card" id="roadmap_card_a">
+        <div class="lead">Level A — 완전 무인화</div>
         <ul class="list" style="margin:8px 0 0 18px">
           <li>영업시간 상주 0, 순회/중앙 관리</li>
           <li>코봇 바스켓 핸들링 + 소스 자동 토스</li>
           <li id="roadmap_capex_a"><b>창업원가(보증금5백만원 포함): ₩124,842,915</b></li>
           <li class="k">문제: 초기 CAPEX·안전/세척 복잡성</li>
         </ul>
+        <div class="equip-list-container"></div>
       </div>
     </div>
 
@@ -513,7 +753,7 @@
   <!-- 의사결정 -->
   <section id="decision" class="sec-slate tint">
     <div class="secbar"></div>
-    <h2 class="accentL">⑩ 임원 의사결정 체크리스트 <span class="pill">Slate</span></h2>
+    <h2 class="accentL">⑪ 임원 의사결정 체크리스트 <span class="pill">Slate</span></h2>
     <table>
         <thead>
             <tr>
@@ -555,13 +795,19 @@
 
 <!-- CAPEX Modal -->
 <div id="capex_modal" class="modal-backdrop">
-    <div class="modal-content">
+    <div id="modal_content" class="modal-content">
         <div class="modal-header">
             <h3 id="modal_title">Level C 상세 CAPEX</h3>
             <button id="modal_close" class="modal-close">&times;</button>
         </div>
         <div class="modal-body" id="modal_body">
-            <!-- Dynamic content will be injected here -->
+            <!-- DYNAMIC MODAL CONTENT: Tabs will be injected here -->
+            <div class="tabs" id="modal_tabs_container">
+                <!-- Tab buttons will be injected here -->
+            </div>
+            <div id="modal_tab_content_container">
+                 <!-- Tab content panels will be injected here -->
+            </div>
         </div>
     </div>
 </div>
@@ -570,3 +816,479 @@
 
 </body>
 </html>
+```--- START OF FILE src/app/catalog/equipment.ts ---
+
+// src/app/catalog/equipment.ts
+import { AppWindow, OpsState } from '../state/ops.ts';
+declare let window: AppWindow;
+
+export const CATALOG = {
+  fryers: [
+    {id:'r-m30',cat:'fryer',brand:'Rinnai',model:'RFA-327G (22L)',baskets:1,unitPrice:1150000, notes: '1마리 1튀김기 원칙을 위한 최소형 가스 튀김기'},
+    {id:'r-m40',cat:'fryer',brand:'Rinnai',model:'RFA-M40G',baskets:2,unitPrice:2090000},
+    {id:'g-gf601',cat:'fryer',brand:'GrandWoosung',model:'GW-GF601',baskets:1,unitPrice:1350000},
+    {id:'g-gf901',cat:'fryer',brand:'GrandWoosung',model:'GW-GF901',baskets:2,unitPrice:2330000}
+  ],
+  oilFilters: [
+    {id:'r-or30',cat:'oilFilter',brand:'Rinnai',model:'ROR-30N',unitPrice:790000},
+    {id:'r-or40',cat:'oilFilter',brand:'Rinnai',model:'ROR-40N',unitPrice:880000},
+    {id:'g-or200',cat:'oilFilter',brand:'GrandWoosung',model:'GWS-OR200N',unitPrice:1050000}
+  ],
+  autoLift: [
+    {id:'a-500',cat:'autoLift',brand:'Ariel',model:'CALF-500',unitPrice:3190000,power:'3상10.5kW'},
+    {id:'a-600',cat:'autoLift',brand:'Ariel',model:'CALF-600',unitPrice:3850000,power:'3상10.5kW'}
+  ],
+  robots: [
+    {id:'rob-frynic', cat:'robots', brand:'Roboson', model:'FRYNIC-24', type:'auto-fry', unitPrice:10000000, rentMonthly:350000, notes:'단순 튀김 공정 자동화. 튀김기 1대당 1대 필요. (Level C)'},
+    {id:'neuromeka-indy7', cat:'robots', brand:'Neuromeka', model:'Indy7', type:'협동로봇', unitPrice:28000000, rentMonthly:850000, notes:'6축 협동로봇. 튀김 바스켓 핸들링, 토스 등. (Level B)'},
+    {id:'induk-bot-v2', cat:'robots', brand:'Induk Robotics', model:'Arm v2', type:'multi-tasking cobot', unitPrice:35000000, rentMonthly:950000, notes:'튀김, 양념, 포장 보조 등 복합 작업 수행. (Level A)'}
+  ],
+  lockers: [
+    {id:'sl-12', cat:'locker', name:'스마트 보온 픽업 락커 (12구)', unitPrice:8500000}
+  ],
+  commonKit: [
+    {id:'frz-65',cat:'freezer',name:'-6℃ 냉동(65박스)',unitPrice:2850000,qty:1},
+    {id:'frg-45',cat:'fridge',name:'4℃ 냉장(45박스)',unitPrice:1950000,qty:1},
+    {id:'sink-2b',cat:'sink',name:'2볼 싱크대 1500',unitPrice:265000,qty:1},
+    {id:'wt-1200',cat:'worktable',name:'스텐 작업대 1200(2단)',unitPrice:129000,qty:1},
+    {id:'warm-ovh',cat:'warmer',name:'오버헤드 워머',unitPrice:232600,qty:1},
+    {id:'warm-shelf',cat:'shelf',name:'보온 선반 1200(2단)',unitPrice:105600,qty:1},
+    {id:'warmer',cat:'warmer',name:'온장고/보온장',unitPrice:329000,qty:1},
+    {id:'kds-24',cat:'kds',name:'모니터 24"(KDS)',unitPrice:238000,qty:1},
+    {id:'pos-tab',cat:'terminal',name:'안드로이드 단말(4GB/32GB)',unitPrice:69000,qty:1},
+    {id:'label',cat:'label',name:'라벨 프린터',unitPrice:222000,qty:1},
+    {id:'cctv4',cat:'cctv',name:'CCTV 4ch NVR 키트',unitPrice:189000,qty:1},
+    {id:'oil-tester',cat:'oil',name:'식용유 산패측정기',unitPrice:888800,qty:1},
+    {id:'install',cat:'install',name:'설치/덕트/전기/소방',unitPrice:15000000,qty:1},
+    {id:'deposit',cat:'deposit',name:'보증금(환급성 자금)',unitPrice:5000000,qty:1}
+  ]
+};
+
+const PRESETS = {
+  C: (slots: number)=> [
+    { ...CATALOG.fryers.find(x=>x.id==='r-m30'), qty: Math.max(4, Math.ceil(slots/1)) },
+    { ...CATALOG.oilFilters.find(x=>x.id==='r-or40'), qty:1 },
+    { ...CATALOG.robots.find(x=>x.id==='rob-frynic'), qty:1, isRental: false },
+    ...CATALOG.commonKit
+  ],
+  B: (slots: number)=> [
+    { ...CATALOG.fryers.find(x=>x.id==='r-m30'), qty: Math.max(4, Math.ceil(slots/1)) },
+    { ...CATALOG.oilFilters.find(x=>x.id==='r-or40'), qty:1 },
+    { ...CATALOG.robots.find(x=>x.id==='neuromeka-indy7'), qty:1, isRental: false },
+    ...CATALOG.commonKit
+  ],
+  A: (slots: number)=> [
+    { ...CATALOG.fryers.find(x=>x.id==='r-m30'), qty: 4 },
+    { ...CATALOG.robots.find(x=>x.id==='induk-bot-v2'), qty: 1, isRental: false },
+    { ...CATALOG.oilFilters.find(x=>x.id==='r-or40'), qty:2 },
+    { ...CATALOG.lockers.find(x=>x.id==='sl-12'), qty:1 },
+    ...CATALOG.commonKit
+  ]
+};
+
+export function getPresetKitByLevel(level: 'A'|'B'|'C', fryerSlots: number) {
+  const slots = level === 'A' ? 4 : (fryerSlots || 4); // Level A is fixed at 4 slots
+  const fn = PRESETS[level] || PRESETS.C;
+  const kit = fn(slots);
+  return window.deepClone(kit.map((item, index) => ({...item, id: item.id || `${item.cat}-${index}`})));
+}
+
+export function resolveSlots(kit: OpsState['equip']): number {
+    const safeKit = Array.isArray(kit) ? kit : [];
+    const mainFryer = safeKit.find(item => item.cat === 'fryer' || item.cat === 'autoLift');
+    return mainFryer?.baskets || 1;
+}--- START OF FILE src/features/capex/EquipTable.tsx ---
+
+// src/features/capex/EquipTable.tsx
+import { KRW } from '../../app/utils/format.ts';
+import { OpsState, AppWindow } from '../../app/state/ops.ts';
+declare let window: AppWindow;
+
+interface EquipTableProps {
+  items: OpsState['equip'];
+  readOnly?: boolean;
+}
+
+export function renderEquipTable(props: EquipTableProps): string {
+    const { items, readOnly = false } = props;
+    const list = Array.isArray(items) ? items : [];
+
+    const rows = list.map((item, index) => {
+        const subtotal = (item.isRental ? 0 : item.unitPrice || 0) * (item.qty || 0);
+        const qtyInput = readOnly
+            ? item.qty
+            : `<input type="number" min="0" value="${item.qty}" class="equip-qty-input">`;
+        
+        const itemDescription = [item.brand, item.model].filter(Boolean).join(' ') || item.name;
+        const notes = item.notes ? `<div class="k" style="font-size: 12px; margin-top: 2px;">${item.notes}</div>` : '';
+
+        return `
+            <tr data-index="${index}" data-id="${item.id}">
+                <td>${item.cat}</td>
+                <td>${itemDescription}${notes}</td>
+                <td class="qty-cell">${qtyInput}</td>
+                <td style="text-align:right;">${KRW(item.unitPrice || 0)}</td>
+                <td style="text-align:right;">${KRW(subtotal)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <table class="equip-table">
+            <thead><tr><th>분류</th><th>모델 및 설명</th><th>수량</th><th>단가</th><th>소계</th></tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="4" style="text-align:right;">합계 CAPEX</th>
+                    <th style="text-align:right;">${KRW(window.sumCapex(list))}</th>
+                </tr>
+            </tfoot>
+        </table>
+    `;
+}--- START OF FILE src/features/capex/CapexModal.tsx ---
+
+// src/features/capex/CapexModal.tsx
+import { GoogleGenAI, Type } from "@google/genai";
+import { AppWindow, OpsState, saveCapexSelection } from '../../app/state/ops.ts';
+import { getPresetKitByLevel, resolveSlots } from '../../app/catalog/equipment.ts';
+import { KRW } from '../../app/utils/format.ts';
+import { renderEquipTable } from './EquipTable.tsx';
+
+declare let window: AppWindow;
+
+let dom: any; // To be initialized by the main script
+
+function hideCapexModal() {
+    if (dom.modal.backdrop) dom.modal.backdrop.style.display = 'none';
+}
+
+function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip'] }) {
+    // FIX: Clear previous content to prevent issues on re-opening the modal.
+    dom.modal.tabsContainer.innerHTML = '';
+    dom.modal.tabContentContainer.innerHTML = '';
+    
+    const { level, localKit } = props;
+    let mutableKit = window.deepClone(localKit);
+
+    dom.modal.title.textContent = `Level ${level} 장비 구성 & CAPEX`;
+    dom.modal.tabsContainer.innerHTML = `
+        <input type="radio" id="modal_tab_equip" name="modal_tabs" checked>
+        <label for="modal_tab_equip">장비 KIT</label>
+        <input type="radio" id="modal_tab_center" name="modal_tabs">
+        <label for="modal_tab_center">센터</label>
+    `;
+    dom.modal.tabContentContainer.innerHTML = `
+        <div id="modal_tab_content_equip" class="tab-content"></div>
+        <div id="modal_tab_content_center" class="tab-content" style="display:none;">
+            <div class="lead" style="font-size: 16px; margin-bottom: 8px;">센터 운영 파라미터</div>
+            <label>순회시간/점포(분): <span class="slider-value">${dom.centerOps.patrolMin.value}</span>
+              <input type="range" min="5" max="60" value="${dom.centerOps.patrolMin.value}" class="slider-input" id="modal_center_patrol_min">
+            </label>
+            <label>세척·설비관리/점포(분): <span class="slider-value">${dom.centerOps.storeCleanMin.value}</span>
+              <input type="range" min="2" max="30" value="${dom.centerOps.storeCleanMin.value}" class="slider-input" id="modal_center_clean_min">
+            </label>
+            <label>QA·보충/점포(분): <span class="slider-value">${dom.centerOps.qaMin.value}</span>
+              <input type="range" min="5" max="45" value="${dom.centerOps.qaMin.value}" class="slider-input" id="modal_center_qa_min">
+            </label>
+            <div class="kpiBar" style="margin-top: 16px;">
+                <span class="chip">센터 필요 FTE: <b id="modal_center_fte_display">${dom.centerOps.outFTE.textContent}</b></span>
+            </div>
+            <div class="capex-toggle" style="margin-top: 16px;">
+                <input type="checkbox" id="modal_center_roi_toggle" ${dom.centerOps.useDetailedCenterOps ? 'checked' : ''}>
+                <label for="modal_center_roi_toggle">상세 인시 계산을 P&L/ROI에 반영</label>
+            </div>
+        </div>
+    `;
+    
+    const equipContentEl = document.getElementById('modal_tab_content_equip');
+    
+    async function handleAiCostResearch() {
+        const btn = document.getElementById('modal_ai_cost_btn') as HTMLButtonElement;
+        const noteEl = document.getElementById('ai_cost_reasoning_note') as HTMLDivElement;
+        if (!btn || !noteEl) return;
+
+        btn.disabled = true;
+        btn.textContent = '🤖 AI 조사 중...';
+        noteEl.style.display = 'none';
+
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = `대한민국 서울 기준, 10평(33m²) 규모의 배달 전문 소형 치킨 매장 개설 시 필요한 '설비 공사(설치/덕트/전기/소방)'의 평균 비용을 원화(KRW)로 알려주세요. 프랜차이즈 본사의 일반적인 감리비는 제외하고, 순수 시공 비용만 추정해주세요. 답변은 반드시 숫자 값만 포함하는 JSON 형식이어야 하며, 추정 근거를 포함해주세요. 예시: {\"averageCost\": 25000000, \"reasoning\": \"일반적인 소형 상업 주방 공사 단가와 소방 설비 의무 기준을 고려했을 때...\"}`;
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    averageCost: {
+                        type: Type.NUMBER,
+                        description: "평균 설비 공사 비용 (원화)",
+                    },
+                    reasoning: {
+                        type: Type.STRING,
+                        description: "비용 추정 근거 요약",
+                    },
+                },
+                required: ["averageCost", "reasoning"],
+            };
+
+            const response = await ai.models.generateContent({
+                // FIX: Corrected model name from a typo 'gemini-2.fasth' to 'gemini-2.5-flash'.
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            });
+
+            const result = JSON.parse(response.text);
+
+            const installItemIndex = mutableKit.findIndex(item => item.id === 'install');
+            if (installItemIndex > -1 && result.averageCost) {
+                mutableKit[installItemIndex].unitPrice = result.averageCost;
+            }
+
+            if (noteEl && result.reasoning) {
+                noteEl.innerHTML = `<b>AI 분석:</b> ${result.reasoning}`;
+                noteEl.style.display = 'block';
+            }
+            rerenderEquipTableInModal();
+
+        } catch (error) {
+            console.error("AI cost research failed:", error);
+            noteEl.innerHTML = `<b>오류:</b> AI로부터 비용 정보를 가져오는 데 실패했습니다.`;
+            noteEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🤖 AI로 인테리어 비용 재조사';
+        }
+    }
+
+    function rerenderEquipTableInModal() {
+        if (!equipContentEl) return;
+        
+        const mainFryer = mutableKit.find(i => i.cat === 'fryer');
+        const currentSlotsPerDevice = mainFryer?.baskets || 1;
+        const currentDeviceCount = Math.ceil((window.ops.fryerSlots||0) / (currentSlotsPerDevice||1));
+        
+        let robotSection = '';
+        const robot = mutableKit.find(i => i.cat === 'robots');
+        if (robot) {
+            robotSection = `
+                <div class="rental-toggle" style="margin-top: 8px;">
+                    <input type="checkbox" id="robot_rental_toggle" ${robot.isRental ? 'checked' : ''} style="width:auto; margin-right: 8px;">
+                    <label for="robot_rental_toggle" style="margin:0;">로봇 렌탈 (월 ${KRW(robot.rentMonthly || 0, false)} OPEX로 처리)</label>
+                </div>
+            `;
+        }
+        
+        let powerWarning = '';
+        const autoLift = mutableKit.find(i => i.cat === 'autoLift' && (i.qty || 0) > 0);
+        if (autoLift) {
+            powerWarning = `<div class="power-warning" style="margin-top: 8px;"><b>⚠️ 경고:</b> ${autoLift.power} 전원 확인 필요</div>`;
+        }
+
+        equipContentEl.innerHTML = `
+            <div id="equip_table_wrapper">${renderEquipTable({ items: mutableKit, readOnly: false })}</div>
+            ${robotSection}
+            ${powerWarning}
+            <div id="ai_cost_reasoning_note" class="note" style="display: none; margin-top: 10px; border-top: none; font-size: 13px;"></div>
+            <div class="modal-summary">
+                <span>권장 장비 수: <b>${currentDeviceCount}</b> 대</span>
+                <span>총 CAPEX: <b id="modal_total_capex">${KRW(window.sumCapex(mutableKit))}</b></span>
+            </div>
+            <div class="modal-actions">
+                <button id="modal_ai_cost_btn" class="btn btn-ai">🤖 AI로 인테리어 비용 재조사</button>
+                <button id="modal_save_btn" class="btn">저장 및 반영</button>
+            </div>
+        `;
+        
+        document.getElementById('equip_table_wrapper')?.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            if (target.classList.contains('equip-qty-input')) {
+                const row = target.closest('tr');
+                if (row) {
+                    const index = parseInt(row.dataset.index || '-1');
+                    if (index >= 0) {
+                        mutableKit[index].qty = parseInt(target.value) || 0;
+                        rerenderEquipTableInModal();
+                    }
+                }
+            }
+        });
+        
+        const rentalToggle = document.getElementById('robot_rental_toggle') as HTMLInputElement;
+        if (rentalToggle && robot) {
+            rentalToggle.addEventListener('change', () => {
+                const robotIndex = mutableKit.findIndex(i => i.cat === 'robots');
+                if (robotIndex > -1) {
+                    mutableKit[robotIndex].isRental = rentalToggle.checked;
+                    rerenderEquipTableInModal();
+                }
+            });
+        }
+
+        document.getElementById('modal_ai_cost_btn')?.addEventListener('click', handleAiCostResearch);
+        document.getElementById('modal_save_btn')?.addEventListener('click', () => {
+            const finalSlotsPerDevice = resolveSlots(mutableKit);
+            saveCapexSelection(mutableKit, { slotsPerDevice: finalSlotsPerDevice });
+            hideCapexModal();
+        });
+    }
+    
+    rerenderEquipTableInModal();
+
+    dom.modal.tabsContainer.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.addEventListener('change', () => {
+            document.querySelectorAll('#modal_tab_content_container .tab-content').forEach(c => (c as HTMLElement).style.display = 'none');
+            const contentId = (input as HTMLInputElement).id.replace('modal_tab_', 'modal_tab_content_');
+            document.getElementById(contentId)!.style.display = 'block';
+        });
+    });
+    
+    // FIX: This entire event handler had a TypeScript error and incorrect logic.
+    // The original code was not correctly mapping the slider ID to the corresponding dom.centerOps key.
+    // This new implementation correctly converts the snake_case slider ID to the camelCase key,
+    // handles the special case for 'storeCleanMin', and updates the correct input element.
+    dom.modal.tabContentContainer.querySelectorAll('.slider-input').forEach(slider => {
+      slider.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        (target.previousElementSibling as HTMLSpanElement).textContent = target.value;
+        
+        const snakeKey = target.id.replace('modal_center_', ''); // e.g., patrol_min
+        let camelKey = snakeKey.replace(/_(\w)/g, (_, c) => c.toUpperCase()); // e.g., patrolMin
+
+        // Special handling for the 'storeCleanMin' key, which doesn't follow the standard pattern.
+        if (camelKey === 'cleanMin') {
+            camelKey = 'storeCleanMin';
+        }
+        
+        const targetKey = camelKey as keyof typeof dom.centerOps;
+        const targetInput = dom.centerOps[targetKey];
+
+        if (targetInput && 'value' in targetInput) {
+            (targetInput as HTMLInputElement).value = target.value;
+        }
+        window.bus.emit('centerOps:recalculate');
+      });
+    });
+    
+    document.getElementById('modal_center_roi_toggle')?.addEventListener('change', (e) => {
+      dom.centerOps.useDetailedCenterOps = (e.target as HTMLInputElement).checked;
+      window.bus.emit('ui:updateAll');
+    });
+
+    dom.modal.backdrop.style.display = 'flex';
+}
+
+function openCapexModal({level = window.ops.level}: {level?: 'A'|'B'|'C'} = {}) {
+    const preset = getPresetKitByLevel(level, window.ops.fryerSlots);
+    const localKit = window.deepClone(window.ops.equip?.length ? window.ops.equip : preset);
+    renderCapexModal({ level, localKit });
+}
+
+export function initCapexModal(domRef: any) {
+    dom = domRef; // Share dom elements with this module
+    dom.modal.closeBtn.addEventListener('click', hideCapexModal);
+    dom.modal.backdrop.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === dom.modal.backdrop) hideCapexModal();
+    });
+    // Global listener setup
+    window.bus.on('capex:open', openCapexModal);
+}--- START OF FILE src/app/utils/format.ts ---
+
+// src/app/utils/format.ts
+export function KRW(n: number, includeSymbol = true): string {
+  if (isNaN(n) || n === null) return '-';
+  const symbol = includeSymbol ? '₩' : '';
+  return symbol + Math.round(n).toLocaleString('ko-KR');
+}
+
+export function formatNumber(n: number): string {
+    if (isNaN(n) || n === null) return '';
+    return n.toLocaleString('ko-KR');
+}
+
+export function parseFormattedNumber(str: string | number): number {
+    if (!str) return 0;
+    if (typeof str === 'string' && str.trim() === '---') return 0;
+    return Number(String(str).replace(/,/g, ''));
+}--- START OF FILE src/app/state/ops.ts ---
+
+// src/app/state/ops.ts
+
+// Forward-declaring the functions that will be defined elsewhere to satisfy TypeScript.
+declare function resolveSlots(kit: OpsState['equip']): number;
+
+export interface OpsState {
+  level: 'C' | 'B' | 'A';
+  fryerSlots: number;
+  slotsPerDevice: number;
+  deviceCount: number;
+  ordersPerHourPeak: number;
+  crewPeak: number;
+  equip: { id?: string; cat: string; brand?: string; model?: string; name?: string; unitPrice: number; qty: number, baskets?: number, power?: string, notes?: string, rentMonthly?: number, isRental?: boolean }[];
+  capexFromEquip: number;
+  sstVersion: number;
+}
+
+export interface AppWindow extends Window {
+  ops: OpsState;
+  bus: {
+    _e: { [key: string]: Function[] };
+    on: (event: string, handler: Function) => () => void;
+    off: (event: string, handler: Function) => void;
+    emit: (event: string, payload?: any) => void;
+  };
+  deepClone: <T>(obj: T) => T;
+  sumCapex: (list: any[]) => number;
+}
+
+declare let window: AppWindow;
+
+export function initState() {
+    window.ops = {
+      level: 'C',
+      fryerSlots: 0,
+      slotsPerDevice: 1,
+      deviceCount: 0,
+      ordersPerHourPeak: 0,
+      crewPeak: 0,
+      equip: [],
+      capexFromEquip: 0,
+      sstVersion: 0
+    };
+    window.bus = {
+      _e: {},
+      on(e, h){ (this._e[e]||(this._e[e]=[])).push(h); return ()=>this.off(e,h); },
+      off(e, h){ this._e[e]=(this._e[e]||[]).filter(x=>x!==h); },
+      emit(e, p){ (this._e[e]||[]).forEach(f=>{try{f(p)}catch(_){} }); }
+    };
+
+    window.deepClone = (x) => (typeof structuredClone === 'function')
+      ? structuredClone(x) : JSON.parse(JSON.stringify(x));
+
+    window.sumCapex = (list) => Array.isArray(list)
+      ? list.reduce((s, i) => {
+          const isRental = i.cat === 'robots' && i.isRental;
+          const price = isRental ? 0 : (i?.unitPrice || 0);
+          return s + (price * (i?.qty || 0));
+        }, 0) : 0;
+}
+
+
+export function setLevel(next: 'A' | 'B' | 'C') {
+  window.ops.level = next;
+  // Crucially, reset the equipment config to avoid carrying over stale state
+  window.ops.equip = [];
+  window.ops.capexFromEquip = 0;
+  window.ops.sstVersion++;
+  window.bus.emit('ops:levelChanged', window.deepClone(window.ops));
+}
+
+export function saveCapexSelection(localKit: OpsState['equip'], {slotsPerDevice}: {slotsPerDevice: number}) {
+    window.ops.equip = window.deepClone(localKit);
+    window.ops.capexFromEquip = window.sumCapex(window.ops.equip);
+    window.ops.slotsPerDevice = +slotsPerDevice || 1;
+    window.ops.deviceCount = Math.ceil((window.ops.fryerSlots||0) / window.ops.slotsPerDevice);
+    window.ops.sstVersion++;
+    window.bus.emit('ops:equipSaved', window.deepClone(window.ops));
+}
