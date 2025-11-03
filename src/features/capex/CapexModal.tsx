@@ -29,7 +29,7 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
         <label for="modal_tab_center">센터</label>
     `;
 
-    // --- FIX: Refactored to use safe DOM manipulation to prevent Vercel build errors ---
+    // --- DEFINITIVE FIX for Vercel Build Error: Refactored to use safe DOM manipulation ---
     const equipContent = document.createElement('div');
     equipContent.id = 'modal_tab_content_equip';
     equipContent.className = 'tab-content';
@@ -71,7 +71,7 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
 
     // Sliders
     centerContent.appendChild(createSlider('순회시간/점포(분)', 'modal_center_patrol_min', dom.centerOps.patrolMin.value, '5', '60'));
-    centerContent.appendChild(createSlider('세척·설비관리/점포(분)', 'modal_center_clean_min', dom.centerOps.storeCleanMin.value, '2', '30'));
+    centerContent.appendChild(createSlider('세척·설비관리/점포(분)', 'modal_center_clean_min', dom.centerOps.storeCleanMin.value, '10', '90'));
     centerContent.appendChild(createSlider('QA·보충/점포(분)', 'modal_center_qa_min', dom.centerOps.qaMin.value, '5', '45'));
 
     // KPI Bar
