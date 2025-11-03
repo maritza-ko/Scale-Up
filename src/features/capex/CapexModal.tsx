@@ -29,8 +29,7 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
         <label for="modal_tab_center">센터</label>
     `;
 
-    // FIX: Refactored to use safe DOM manipulation instead of a large innerHTML string,
-    // which was causing a Vercel build error.
+    // --- FIX: Refactored to use safe DOM manipulation to prevent Vercel build errors ---
     const equipContent = document.createElement('div');
     equipContent.id = 'modal_tab_content_equip';
     equipContent.className = 'tab-content';
@@ -40,21 +39,56 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
     centerContent.className = 'tab-content';
     centerContent.style.display = 'none';
 
-    centerContent.innerHTML = `
-        <div class="lead" style="font-size: 16px; margin-bottom: 8px;">센터 운영 파라미터</div>
-        <label>순회시간/점포(분): <span class="slider-value">${dom.centerOps.patrolMin.value}</span>
-          <input type="range" min="5" max="60" value="${dom.centerOps.patrolMin.value}" class="slider-input" id="modal_center_patrol_min">
-        </label>
-        <label>세척·설비관리/점포(분): <span class="slider-value">${dom.centerOps.storeCleanMin.value}</span>
-          <input type="range" min="2" max="30" value="${dom.centerOps.storeCleanMin.value}" class="slider-input" id="modal_center_clean_min">
-        </label>
-        <label>QA·보충/점포(분): <span class="slider-value">${dom.centerOps.qaMin.value}</span>
-          <input type="range" min="5" max="45" value="${dom.centerOps.qaMin.value}" class="slider-input" id="modal_center_qa_min">
-        </label>
-        <div class="kpiBar" style="margin-top: 16px;">
-            <span class="chip">센터 필요 FTE: <b id="modal_center_fte_display">${dom.centerOps.outFTE.textContent}</b></span>
-        </div>
-    `;
+    // Title
+    const leadDiv = document.createElement('div');
+    leadDiv.className = 'lead';
+    leadDiv.style.fontSize = '16px';
+    leadDiv.style.marginBottom = '8px';
+    leadDiv.textContent = '센터 운영 파라미터';
+    centerContent.appendChild(leadDiv);
+
+    // Helper to create slider sections safely
+    const createSlider = (labelText: string, id: string, value: string, min: string, max: string) => {
+        const label = document.createElement('label');
+        label.textContent = `${labelText}: `;
+        
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'slider-value';
+        valueSpan.textContent = value;
+        label.appendChild(valueSpan);
+        
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = min;
+        slider.max = max;
+        slider.value = value;
+        slider.className = 'slider-input';
+        slider.id = id;
+        
+        label.appendChild(slider);
+        return label;
+    };
+
+    // Sliders
+    centerContent.appendChild(createSlider('순회시간/점포(분)', 'modal_center_patrol_min', dom.centerOps.patrolMin.value, '5', '60'));
+    centerContent.appendChild(createSlider('세척·설비관리/점포(분)', 'modal_center_clean_min', dom.centerOps.storeCleanMin.value, '2', '30'));
+    centerContent.appendChild(createSlider('QA·보충/점포(분)', 'modal_center_qa_min', dom.centerOps.qaMin.value, '5', '45'));
+
+    // KPI Bar
+    const kpiDiv = document.createElement('div');
+    kpiDiv.className = 'kpiBar';
+    kpiDiv.style.marginTop = '16px';
+
+    const chipSpan = document.createElement('span');
+    chipSpan.className = 'chip';
+    chipSpan.textContent = '센터 필요 FTE: ';
+    
+    const fteB = document.createElement('b');
+    fteB.id = 'modal_center_fte_display';
+    fteB.textContent = dom.centerOps.outFTE.textContent;
+    chipSpan.appendChild(fteB);
+    kpiDiv.appendChild(chipSpan);
+    centerContent.appendChild(kpiDiv);
 
     const toggleDiv = document.createElement('div');
     toggleDiv.className = 'capex-toggle';
@@ -72,6 +106,8 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
     toggleDiv.appendChild(toggleInput);
     toggleDiv.appendChild(toggleLabel);
     centerContent.appendChild(toggleDiv);
+    // --- End of refactor ---
+
 
     dom.modal.tabContentContainer.appendChild(equipContent);
     dom.modal.tabContentContainer.appendChild(centerContent);
