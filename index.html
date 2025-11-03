@@ -373,7 +373,7 @@
           <div class="lead">인건비 & 운영 기본 가정</div>
           <label>근무시간(시간/일) <input id="pl_hours" type="text" value="13" /></label>
           <label>기본 시급(원) <input id="pl_base_wage" type="text" value="10,030" readonly /></label>
-          <label>책정 시급 승수 (AI 추천) <input id="pl_wage_multiplier" type="text" value="1.2" /></label>
+          <label>매장 시급 승수 <input id="pl_wage_multiplier" type="text" value="1.2" readonly/></label>
           <label>책정 시급 (기본 × 승수) <input id="pl_calc_wage" type="text" value="12,036" readonly /></label>
           <label>월 일수 <input id="pl_days" type="text" value="30" /></label>
           <div class="note" style="border:none; padding:0; margin-top: 8px;">모든 인건비 계산의 기초가 되는 값입니다.</div>
@@ -388,12 +388,10 @@
               
               <div id="pl_patrol_container">
                   <label>순회 관리 인력 1인당 담당 매장 수 (<span id="pl_patrol_stores_label">C레벨</span>) <input id="pl_patrol_stores" type="text" value="---" disabled/></label>
-                  <label>순회 관리 인력 시급 승수 (<span id="pl_patrol_wage_label">C레벨</span>) <input id="pl_patrol_wage" type="text" value="---" disabled/></label>
               </div>
               
               <div id="pl_washing_container">
                   <label>중앙 세척/소분 인력 1인당 담당 매장 수 (<span id="pl_washing_stores_label">C레벨</span>) <input id="pl_washing_stores" type="text" value="---" disabled/></label>
-                  <label>중앙 세척/소분 인력 시급 승수 (<span id="pl_washing_wage_label">C레벨</span>) <input id="pl_washing_wage" type="text" value="---" disabled/></label>
               </div>
           </div>
 
@@ -506,6 +504,7 @@
         <div class="grid g-2" style="margin-top: 8px;">
           <div><label>본사 물류 마진율(0~1) <input id="hq_margin_rate" type="text" value="0.25" /></label></div>
           <div><label>본사 임대료(월) <input id="hq_rent" type="text" value="3,000,000" /></label></div>
+          <div><label>관제센터 시급 승수 <input id="hq_wage_multiplier" type="text" value="1.5" /></label></div>
           <div><label>본사 공과금/기타(월) <input id="hq_util" type="text" value="1,000,000" /></label></div>
           <div><label>본사 SaaS/라이선스(월) <input id="hq_saas" type="text" value="500,000" /></label></div>
         </div>
@@ -816,3 +815,5 @@
 
 </body>
 </html>
+Fix the following errors:
+Uncaught TypeError: Cannot read properties of null (reading 'value')
