@@ -177,9 +177,7 @@ window.addEventListener('load', async () => {
       threePlRate: document.getElementById('pl_3pl_rate') as HTMLInputElement,
       bSavings: document.getElementById('pl_b_savings') as HTMLInputElement,
       patrolStores: document.getElementById('pl_patrol_stores') as HTMLInputElement,
-      patrolWage: document.getElementById('pl_patrol_wage') as HTMLInputElement,
       washingStores: document.getElementById('pl_washing_stores') as HTMLInputElement,
-      washingWage: document.getElementById('pl_washing_wage') as HTMLInputElement,
     },
     assumptions: {
       levelTitle: document.getElementById('assumptions_level_title') as HTMLDivElement,
@@ -189,9 +187,7 @@ window.addEventListener('load', async () => {
       washingContainer: document.getElementById('pl_washing_container') as HTMLDivElement,
       bLevelLabel: document.getElementById('pl_b_level_label') as HTMLSpanElement,
       patrolStoresLabel: document.getElementById('pl_patrol_stores_label') as HTMLSpanElement,
-      patrolWageLabel: document.getElementById('pl_patrol_wage_label') as HTMLSpanElement,
       washingStoresLabel: document.getElementById('pl_washing_stores_label') as HTMLSpanElement,
-      washingWageLabel: document.getElementById('pl_washing_wage_label') as HTMLSpanElement,
     },
     // P&L KPI Bar
     pl_kpi: {
@@ -249,6 +245,8 @@ window.addEventListener('load', async () => {
         t_var_etc: document.getElementById('p_t_var_etc') as HTMLTableCellElement,
         t_cm: document.getElementById('p_t_cm') as HTMLTableCellElement,
         t_fix_store: document.getElementById('p_t_fix_store') as HTMLTableCellElement,
+        t_rental: document.getElementById('p_t_rental') as HTMLTableCellElement,
+        rental_row: document.getElementById('total_pnl_rental_row') as HTMLTableRowElement,
         t_center_wage: document.getElementById('p_t_center_wage') as HTMLTableCellElement,
         t_washing_wage: document.getElementById('p_t_washing_wage') as HTMLTableCellElement,
         washing_wage_row: document.getElementById('total_pnl_washing_wage_row') as HTMLTableRowElement,
@@ -265,6 +263,7 @@ window.addEventListener('load', async () => {
         rent: document.getElementById('hq_rent') as HTMLInputElement,
         util: document.getElementById('hq_util') as HTMLInputElement,
         saas: document.getElementById('hq_saas') as HTMLInputElement,
+        wageMultiplier: document.getElementById('hq_wage_multiplier') as HTMLInputElement,
         t_cogs: document.getElementById('hq_t_cogs') as HTMLTableCellElement,
         t_revenue: document.getElementById('hq_t_revenue') as HTMLTableCellElement,
         t_revenue_desc: document.getElementById('hq_t_revenue_desc') as HTMLTableCellElement,
@@ -424,7 +423,7 @@ window.addEventListener('load', async () => {
 
   function revertAiParameters() {
     state.beforeAiRawValues.forEach((value, key) => {
-        const inputEl = dom.pl[key as keyof typeof dom.pl];
+        const inputEl = dom.pl[key as keyof typeof dom.pl] ?? dom.hq_pnl[key as keyof typeof dom.hq_pnl];
         if (inputEl && 'value' in inputEl) {
             (inputEl as HTMLInputElement).value = value;
         }
@@ -515,7 +514,7 @@ window.addEventListener('load', async () => {
       const total = centerDirector + corporate.total + regional.total + washing.staffCount + patrol.staffCount;
       return { centerDirector, corporate, regional, washing, patrol, total };
   }
-  function calculateTotalCentralWages(allStaffData: any) {
+  function calculateTotalCentralWages(allStaffData: any, hqWageMultiplier: number) {
       const s = state.aiParams.centerStaffSalaries;
       const directorWage = s.head;
       const corporateWage = s.corporate * (allStaffData.corporate?.corporate ?? 0) +
@@ -524,9 +523,14 @@ window.addEventListener('load', async () => {
                           s.techSupport * (allStaffData.corporate?.technical ?? 0) +
                           s.monitoring * (allStaffData.corporate?.monitoring ?? 0);
       const regionalWage = s.techSupport * (allStaffData.regional?.total ?? 0);
+      
+      const totalMonthlyOfficeWages = (directorWage + corporateWage + regionalWage);
+      
+      const baseInputs = getCurrentBaseInputs();
+      const washingMonthlyWage = calculateWashingLaborCost(state.storeCount, baseInputs, getAutomationLevel(state.storeCount)).totalCost;
+      const patrolMonthlyWage = calculatePatrolLaborCost(state.storeCount, baseInputs, getAutomationLevel(state.storeCount)).totalCost;
 
-      const totalMonthly = directorWage + corporateWage + regionalWage;
-      return { total: totalMonthly };
+      return { total: totalMonthlyOfficeWages + washingMonthlyWage + patrolMonthlyWage, office: totalMonthlyOfficeWages, washing: washingMonthlyWage, patrol: patrolMonthlyWage };
   }
   function calculateTotalHqCapex(storeCount: number, allStaff: any) {
       const factors = state.aiParams.capexFactors;
@@ -545,7 +549,7 @@ window.addEventListener('load', async () => {
           return { totalCost: 0, staffCount: 0 };
       }
       const staffCount = Math.ceil(storeCount / baseInputs.washingStores);
-      const monthlyWagePerPerson = baseInputs.baseWage * baseInputs.washingWage * baseInputs.hours * baseInputs.days;
+      const monthlyWagePerPerson = baseInputs.baseWage * parseFormattedNumber(dom.hq_pnl.wageMultiplier.value) * baseInputs.hours * baseInputs.days;
       const totalCost = staffCount * monthlyWagePerPerson;
       return { totalCost, staffCount };
   }
@@ -554,7 +558,7 @@ window.addEventListener('load', async () => {
           return { totalCost: 0, staffCount: 0 };
       }
       const staffCount = Math.ceil(storeCount / baseInputs.patrolStores);
-      const monthlyWagePerPerson = baseInputs.baseWage * baseInputs.patrolWage * baseInputs.hours * baseInputs.days;
+      const monthlyWagePerPerson = baseInputs.baseWage * parseFormattedNumber(dom.hq_pnl.wageMultiplier.value) * baseInputs.hours * baseInputs.days;
       const totalCost = staffCount * monthlyWagePerPerson;
       return { totalCost, staffCount };
   }
@@ -704,10 +708,10 @@ window.addEventListener('load', async () => {
   }
   function calcPNL(storeCount: number, baseInputs: any) {
       const level = getAutomationLevel(storeCount);
+      const hqWageMultiplier = parseFormattedNumber(dom.hq_pnl.wageMultiplier.value);
       const allStaff = calculateAllStaff(storeCount, baseInputs, level);
-      const centralSupportWages = calculateTotalCentralWages(allStaff);
-      const washingLabor = calculateWashingLaborCost(storeCount, baseInputs, level);
-      const patrolLabor = calculatePatrolLaborCost(storeCount, baseInputs, level);
+      const centralSupportWages = calculateTotalCentralWages(allStaff, hqWageMultiplier);
+      
       const rentalCost = calculateTotalRentalCost();
       const monthlyRev = baseInputs.aov * baseInputs.unitsDay * baseInputs.days;
       const cogsDiscount = state.aiParamsApplied ? calculateCogsDiscount(storeCount) : 0;
@@ -731,8 +735,7 @@ window.addEventListener('load', async () => {
       };
       const totalMonthlyHqOverhead = hqOverhead.rent + hqOverhead.util + hqOverhead.saas;
       
-      const totalMonthlyCentralWages = centralSupportWages.total + washingLabor.totalCost + patrolLabor.totalCost;
-      const totalDistributableCenterCost = totalMonthlyCentralWages + totalMonthlyHqOverhead;
+      const totalDistributableCenterCost = centralSupportWages.total + totalMonthlyHqOverhead;
       const centerStoreCost = storeCount > 0 ? totalDistributableCenterCost / storeCount : 0;
       
       const fixedCost = laborCost + baseInputs.rent + baseInputs.saas + centerStoreCost + rentalCost;
@@ -746,7 +749,7 @@ window.addEventListener('load', async () => {
           monthlyRev, cogsAbs, cogsRatio, pfAbs, utilAbs, threePlAbs, varCost, cm,
           laborCost, rent: baseInputs.rent, saas: baseInputs.saas, centerStoreCost, fixedCost, rentalCost,
           ebitda, margin, payback, bepUnits, unitCapex,
-          allStaff, centralSupportWages, washingLabor, patrolLabor, hqOverhead,
+          allStaff, centralSupportWages, hqOverhead,
       };
   }
   function calculateFixed10CScenario() {
@@ -772,14 +775,12 @@ window.addEventListener('load', async () => {
         saas: gv('saas'),
         hours: gv('hours'),
         baseWage: gv('baseWage'),
-        wageMultiplier: gv('wageMultiplier'),
+        wageMultiplier: parseFormattedNumber(dom.pl.wageMultiplier.value),
         days: gv('days'),
         threePlRate: gv('threePlRate'),
         bSavings: gv('bSavings'),
         patrolStores: gv('patrolStores'),
-        patrolWage: gv('patrolWage'),
         washingStores: gv('washingStores'),
-        washingWage: gv('washingWage'),
     };
   }
   function updateSummaryUI(storeCount: number, level: 'A' | 'B' | 'C') {
@@ -800,10 +801,7 @@ window.addEventListener('load', async () => {
   
   function formatStaffingReasoning(text: string): string {
     if (!text) return '';
-
-    // The AI might return markdown-like bolding with **. Convert it to <b> tags first.
     let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-
     let conclusion = '';
     const conclusionKeyword = '결론적으로';
     const conclusionIndex = formattedText.indexOf(conclusionKeyword);
@@ -811,36 +809,19 @@ window.addEventListener('load', async () => {
         conclusion = formattedText.substring(conclusionIndex);
         formattedText = formattedText.substring(0, conclusionIndex);
     }
-    
-    // Split the text into an intro and a list of numbered points.
-    // The regex looks for a number followed by a dot and a space, which marks the start of a list item.
-    // The positive lookahead `(?=...)` splits the string *before* the pattern, keeping the pattern in the next element.
     const parts = formattedText.split(/\s*(?=\d+\.\s+<b>)/);
-
-    // The first part is the introduction.
     const intro = parts.shift() || ''; 
-    
-    // If no numbered points are found, we just format with paragraphs.
     if (parts.length === 0) {
         let result = '';
         if (intro.trim()) result += `<p>${intro.trim()}</p>`;
         if (conclusion.trim()) result += `<p>${conclusion.trim()}</p>`;
         return result;
     }
-
-    // Each subsequent part is a list item.
-    const listItems = parts.map(part => {
-        // Remove the number and dot from the beginning for the list item content.
-        const content = part.replace(/^\d+\.\s+/, '');
-        return `<li>${content.trim()}</li>`;
-    }).join('');
-
-    // Assemble the final HTML.
+    const listItems = parts.map(part => `<li>${part.replace(/^\d+\.\s+/, '').trim()}</li>`).join('');
     let finalHtml = '';
     if (intro.trim()) finalHtml += `<p>${intro.trim()}</p>`;
     finalHtml += `<ul>${listItems}</ul>`;
     if (conclusion.trim()) finalHtml += `<p>${conclusion.trim()}</p>`;
-    
     return finalHtml;
   }
 
@@ -861,9 +842,8 @@ window.addEventListener('load', async () => {
     dom.conclusionStaff.innerHTML = staffText;
     
     const corp = allStaff.corporate;
-    const totalHqStaff = allStaff.centerDirector + corp.total; // FIX: Use centerDirector
+    const totalHqStaff = allStaff.centerDirector + corp.total;
     const staffDetails = [
-      // FIX: Changed '임원' to '센터장'
       `본사 ${totalHqStaff}명 (센터장 ${allStaff.centerDirector}, 경영/기획 ${corp.corporate}, CS ${corp.cs}, 플랫폼관리 ${corp.platform}, 기술지원 ${corp.technical}, 원격관제 ${corp.monitoring})`,
       `지역 거점 ${allStaff.regional?.total ?? 0}명 (지점장 ${allStaff.regional?.hubManagers ?? 0}, 기술지원 ${allStaff.regional?.techSupport ?? 0})`,
       `중앙 세척/소분 ${allStaff.washing?.staffCount ?? 0}명`,
@@ -872,7 +852,6 @@ window.addEventListener('load', async () => {
 
     const staffBreakdown = `<b>주석</b> — 총원 ${allStaff.total}명 구성: ${staffDetails.join(', ')}.`;
     
-    // FIX: This logic ensures the AI justification note is correctly appended without being overwritten.
     dom.conclusionStaffNote.innerHTML = staffBreakdown.replace(/\s+/g, ' ').trim();
     if (state.aiParamsApplied && state.aiParams.staffing_reasoning) {
         const formattedReasoning = formatStaffingReasoning(state.aiParams.staffing_reasoning);
@@ -955,29 +934,21 @@ window.addEventListener('load', async () => {
     dom.assumptions.bLevelLabel.textContent = `${level}레벨`;
 
     dom.pl.patrolStores.disabled = isC;
-    dom.pl.patrolWage.disabled = isC;
     dom.assumptions.patrolContainer.style.opacity = isC ? '0.5' : '1';
     dom.assumptions.patrolStoresLabel.textContent = `${level}레벨`;
-    dom.assumptions.patrolWageLabel.textContent = `${level}레벨`;
     if (isC) {
         dom.pl.patrolStores.value = '---';
-        dom.pl.patrolWage.value = '---';
     } else if (dom.pl.patrolStores.value === '---' || !parseFormattedNumber(dom.pl.patrolStores.value)) {
         dom.pl.patrolStores.value = isA ? '10' : '20';
-        dom.pl.patrolWage.value = '1.5';
     }
 
     dom.pl.washingStores.disabled = !isA;
-    dom.pl.washingWage.disabled = !isA;
     dom.assumptions.washingContainer.style.opacity = isA ? '1' : '0.5';
     dom.assumptions.washingStoresLabel.textContent = `${level}레벨`;
-    dom.assumptions.washingWageLabel.textContent = `${level}레벨`;
     if (!isA) {
         dom.pl.washingStores.value = '---';
-        dom.pl.washingWage.value = '---';
     } else if (dom.pl.washingStores.value === '---' || !parseFormattedNumber(dom.pl.washingStores.value)) {
         dom.pl.washingStores.value = '6';
-        dom.pl.washingWage.value = '1.3';
     }
     
     dom.total_pnl.patrol_wage_row.style.display = isC ? 'none' : '';
@@ -1094,11 +1065,11 @@ window.addEventListener('load', async () => {
     const totalAnnualRev = pnl.monthlyRev * storeCount * 12;
     const totalAnnualCogs = pnl.cogsAbs * storeCount * 12;
     const totalAnnualVar = pnl.varCost * storeCount * 12;
-    const totalAnnualStoreFixed = (pnl.laborCost + pnl.rent + pnl.saas + pnl.rentalCost) * storeCount * 12;
-    const totalMonthlyCentralWages = pnl.centralSupportWages.total + pnl.washingLabor.totalCost + pnl.patrolLabor.totalCost;
-    const totalAnnualCentralWages = totalMonthlyCentralWages * 12;
+    const totalAnnualStoreFixed = (pnl.laborCost + pnl.rent + pnl.saas) * storeCount * 12;
+    const totalAnnualRental = pnl.rentalCost * storeCount * 12;
+    const totalAnnualCentralWages = pnl.centralSupportWages.total * 12;
     const totalAnnualFixed = totalAnnualStoreFixed + totalAnnualCentralWages;
-    const totalAnnualEbitda = totalAnnualRev - totalAnnualVar - totalAnnualFixed;
+    const totalAnnualEbitda = totalAnnualRev - totalAnnualVar - totalAnnualFixed - totalAnnualRental;
     const totalCapexData = calculateTotalHqCapex(storeCount, pnl.allStaff);
     const totalPackageCapex = (pnl.unitCapex * storeCount) + totalCapexData.total;
     const totalPayback = (totalAnnualEbitda > 0) ? totalPackageCapex / totalAnnualEbitda : Infinity;
@@ -1113,7 +1084,7 @@ window.addEventListener('load', async () => {
     dom.total_pnl.rev.textContent = KRW(totalAnnualRev);
     dom.total_pnl.cogsRatio.textContent = `${(pnl.cogsRatio * 100).toFixed(1)}%`;
     dom.total_pnl.var.textContent = KRW(totalAnnualVar);
-    dom.total_pnl.fix.textContent = KRW(totalAnnualFixed);
+    dom.total_pnl.fix.textContent = KRW(totalAnnualFixed + totalAnnualRental);
     dom.total_pnl.ebitda.textContent = KRW(totalAnnualEbitda);
     dom.total_pnl.pay.textContent = isFinite(totalPayback) ? `${totalPayback.toFixed(1)} 년` : '회수불가';
 
@@ -1123,9 +1094,16 @@ window.addEventListener('load', async () => {
     dom.total_pnl.t_var_etc.textContent = KRW(totalAnnualVar - totalAnnualCogs);
     dom.total_pnl.t_cm.textContent = KRW(totalAnnualRev - totalAnnualVar);
     dom.total_pnl.t_fix_store.textContent = KRW(totalAnnualStoreFixed);
-    dom.total_pnl.t_center_wage.textContent = KRW(pnl.centralSupportWages.total * 12);
-    dom.total_pnl.t_washing_wage.textContent = KRW(pnl.washingLabor.totalCost * 12);
-    dom.total_pnl.t_patrol_wage.textContent = KRW(pnl.patrolLabor.totalCost * 12);
+    if (totalAnnualRental > 0) {
+        dom.total_pnl.rental_row.style.display = '';
+        dom.total_pnl.t_rental.textContent = KRW(totalAnnualRental);
+    } else {
+        dom.total_pnl.rental_row.style.display = 'none';
+        dom.total_pnl.t_rental.textContent = '-';
+    }
+    dom.total_pnl.t_center_wage.textContent = KRW(pnl.centralSupportWages.office * 12);
+    dom.total_pnl.t_washing_wage.textContent = KRW(pnl.centralSupportWages.washing * 12);
+    dom.total_pnl.t_patrol_wage.textContent = KRW(pnl.centralSupportWages.patrol * 12);
     dom.total_pnl.t_ebitda.textContent = KRW(totalAnnualEbitda);
     const totalMargin = totalAnnualRev > 0 ? totalAnnualEbitda / totalAnnualRev : 0;
     dom.total_pnl.t_margin.textContent = `마진 ${(totalMargin * 100).toFixed(1)}%`;
@@ -1148,7 +1126,7 @@ window.addEventListener('load', async () => {
     const marginRate = parseFormattedNumber(dom.hq_pnl.marginRate.value);
     const hqRevenue = totalAnnualCogs * marginRate;
 
-    const totalAnnualCentralWages = (pnl.centralSupportWages.total + pnl.washingLabor.totalCost + pnl.patrolLabor.totalCost) * 12;
+    const totalAnnualCentralWages = pnl.centralSupportWages.total * 12;
     const totalAnnualHqOverhead = (pnl.hqOverhead.rent + pnl.hqOverhead.util + pnl.hqOverhead.saas) * 12;
     
     const hqEbitda = hqRevenue - totalAnnualCentralWages - totalAnnualHqOverhead;
@@ -1159,9 +1137,9 @@ window.addEventListener('load', async () => {
     dom.hq_pnl.t_cogs.textContent = KRW(totalAnnualCogs);
     dom.hq_pnl.t_revenue.textContent = KRW(hqRevenue);
     dom.hq_pnl.t_revenue_desc.textContent = `총 공급가액 × ${marginRate * 100}%`;
-    dom.hq_pnl.t_center_wage.textContent = KRW(pnl.centralSupportWages.total * 12);
-    dom.hq_pnl.t_washing_wage.textContent = KRW(pnl.washingLabor.totalCost * 12);
-    dom.hq_pnl.t_patrol_wage.textContent = KRW(pnl.patrolLabor.totalCost * 12);
+    dom.hq_pnl.t_center_wage.textContent = KRW(pnl.centralSupportWages.office * 12);
+    dom.hq_pnl.t_washing_wage.textContent = KRW(pnl.centralSupportWages.washing * 12);
+    dom.hq_pnl.t_patrol_wage.textContent = KRW(pnl.centralSupportWages.patrol * 12);
     dom.hq_pnl.t_overhead.textContent = KRW(totalAnnualHqOverhead);
     dom.hq_pnl.t_ebitda.textContent = KRW(hqEbitda);
     dom.hq_pnl.t_payback.textContent = isFinite(hqPayback) ? `${hqPayback.toFixed(1)} 년` : '회수불가';
@@ -1233,7 +1211,9 @@ window.addEventListener('load', async () => {
     clearAiHighlightsAndDefaults();
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Use environment variable for API Key
+        const ai = new GoogleGenAI({ apiKey: 'AIzaSyDDgIyq1naLE9Iv6AV_pYhzVgj6VZZXTiI' });
+        
         const storeCount = state.storeCount;
         const unitsDay = gv('unitsDay');
         const level = getAutomationLevel(storeCount);
@@ -1261,7 +1241,7 @@ window.addEventListener('load', async () => {
 - **threePlRate**: 'COGS 대비 3PL 비율(0~1)'. 중앙 공장에서 각 매장으로 초벌 닭을 배송하는 **단순 택배/운송 비용**의 비율입니다. COGS의 **1~5% (0.01~0.05)** 사이가 현실적인 범위이며, **0.8(80%)과 같은 값은 비즈니스 모델을 파괴하는 비현실적인 수치이므로 절대 제안해서는 안 됩니다.**
 - **wageMultiplier**: '책정 시급 승수'. 기본 시급 대비 본사/관제 인력의 시급 프리미엄을 나타내는 **배수(e.g., 1.2)** 입니다. **절대적인 급여액(e.g., 2800000)이 아닙니다.**
 - **washingStores**: '중앙 세척/소분 인력 1인당 담당 매장 수 (A레벨)'. 이 인력은 매장을 순회하며 (1) 매장 전체 청소, (2) 튀김기 오일 교체, (3) 튀김기 내부 딥클리닝 등 전문적인 위생 관리를 수행합니다. **1개 매장을 청소하는 데 최소 1시간이 소요된다고 가정**해야 합니다. 따라서 9시간 근무 기준, 1명의 인력이 하루에 처리할 수 있는 매장 수는 **최대 8개를 넘기 어렵습니다.** 당신의 제안은 이 현실적인 제약 조건을 반드시 반영해야 하며, 기본값(6)에서 크게 벗어나지 않는 선에서 타당한 근거를 제시해야 합니다. 30과 같은 비현실적인 숫자는 절대 제안해서는 안 됩니다.
-- **monitoring**: '원격관제 인력'. Level A에서만 필요하며, 다수의 매장을 원격으로 모니터링하고 AI가 감지한 이상 신호(장비 오류, 보안 문제 등)에 대응하는 역할입니다. 1명의 인력이 현실적으로 관리할 수 있는 매장 수는 **100개를 초과하기 어렵습니다.** 당신의 제안은 이 제약 조건을 반드시 반영해야 합니다.
+- **monitoring**: '원격관제 인력'. Level A에서만 필요하며, 다수의 매장을 원격으로 모니터링하고 AI가 감지한 이상 신호(장비 오류, 보안 문제 등)에 대응하는 역할입니다. 1명의 인력이 현실적으로 관리할 수 있는 매장 수는 **100개를 초과하기 어렵습니다.** 당신의 제안은 이 현실적인 제약 조건을 반드시 반영해야 합니다.
 
 ### **CRITICAL: 현재 기본 인력 모델 (심각한 검토 필요)**
 현재 시뮬레이터의 기본값은 비현실적인 단순 비율 계산에 따라 다음과 같이 설정되어 있습니다:
@@ -1349,16 +1329,17 @@ JSON 스키마에 따라 답변하고, 각 값에 대한 **구체적이고 현�
 
 
             state.beforeAiRawValues.clear();
-            Object.keys(currentInputs).forEach(keyStr => {
-                const key = keyStr as keyof typeof dom.pl;
-                const inputEl = dom.pl[key];
+            const allInputs = {...dom.pl, ...dom.hq_pnl};
+            Object.keys(allInputs).forEach(keyStr => {
+                const key = keyStr as keyof typeof allInputs;
+                const inputEl = allInputs[key];
                 if(inputEl && 'value' in inputEl) {
                     state.beforeAiRawValues.set(key, (inputEl as HTMLInputElement).value);
                 }
             });
         }
 
-        const keyMap: { [key in PnlParameterKey]?: keyof typeof dom.pl } = {
+        const keyMap: { [key in PnlParameterKey]?: (keyof typeof dom.pl | keyof typeof dom.hq_pnl) } = {
           pf: 'pf', rent: 'rent', utilRate: 'utilRate', bSavings: 'bSavings',
           patrolStores: 'patrolStores', washingStores: 'washingStores',
           procCost: 'procCost', pkgCost: 'pkgCost', serviceCost: 'serviceCost',
@@ -1367,12 +1348,13 @@ JSON 스키마에 따라 답변하고, 각 값에 대한 **구체적이고 현�
         
         parameters.forEach(param => {
             const domKey = keyMap[param.key] || param.key as keyof typeof dom.pl;
-            const inputEl = dom.pl[domKey];
-            if (inputEl && !inputEl.disabled) {
+            const inputEl = dom.pl[domKey as keyof typeof dom.pl] ?? dom.hq_pnl[domKey as keyof typeof dom.hq_pnl];
+            
+            if (inputEl && 'disabled' in inputEl && !inputEl.disabled) {
                 const defaultValue = state.beforeAiRawValues.get(domKey) || '0';
                 const isRate = ['pf', 'utilRate', 'threePlRate', 'wageMultiplier'].includes(param.key);
 
-                inputEl.value = isRate ? param.value.toString() : formatNumber(param.value);
+                (inputEl as HTMLInputElement).value = isRate ? param.value.toString() : formatNumber(param.value);
                 inputEl.classList.add('ai-applied');
 
                 const parent = inputEl.parentElement;
@@ -1380,7 +1362,7 @@ JSON 스키마에 따라 답변하고, 각 값에 대한 **구체적이고 현�
                     parent.querySelector('.ai-reasoning-note-item')?.remove();
                     const noteEl = document.createElement('div');
                     noteEl.className = 'ai-reasoning-note-item';
-                    noteEl.innerHTML = `<b>AI:</b> ${inputEl.value} (기본값: ${defaultValue}). ${param.reasoning}`;
+                    noteEl.innerHTML = `<b>AI:</b> ${ (inputEl as HTMLInputElement).value} (기본값: ${defaultValue}). ${param.reasoning}`;
                     parent.appendChild(noteEl);
                 }
             }
@@ -1491,11 +1473,11 @@ JSON 스키마에 따라 답변하고, 각 값에 대한 **구체적이고 현�
     dom.capacityPlan.fryerType.addEventListener('change', calculateAndDisplayCapacityPlan);
     dom.capacityPlan.diagnoseBtn.addEventListener('click', () => {
         dom.capacityPlan.diagnosisResults.style.display = 'block';
-        runAndDisplayDiagnosis();
+        wireDiagnosis6000();
     });
     Object.values(dom.capacityPlan.diag).forEach(el => {
         if (el instanceof HTMLElement && el.tagName === 'INPUT') {
-            el.addEventListener('input', () => runAndDisplayDiagnosis());
+            el.addEventListener('input', () => wireDiagnosis6000());
         }
     });
     dom.capacityPlan.diagTabs.tab1.addEventListener('change', () => {
@@ -1555,10 +1537,154 @@ JSON 스키마에 따라 답변하고, 각 값에 대한 **구체적이고 현�
 
   }
 
-  // --- STARTUP ---
+  // === [FIX] ④-1 CAPA: "🎯 목표 6천 진단" ===
+  function wireDiagnosis6000() {
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const btn = $('cap_diagnose_btn');
+    if (!btn) return;
+  
+    const sugg = { aov: $('sugg_aov'), peak: $('sugg_peak'), fryer: $('sugg_fryer'), pack: $('sugg_pack'), op: $('sugg_op') };
+  
+    const num = (x: string | number | null | undefined, fallback = 0) => {
+      if (x === null || x === undefined) return fallback;
+      if (typeof x === 'number') return isFinite(x) ? x : fallback;
+      const s = String(x).trim();
+      if (!s) return fallback;
+      const v = Number(s.replace(/[^\d.-]/g, ''));
+      return isFinite(v) ? v : fallback;
+    };
+  
+    const readNumberFromText = (id: string, fallback = 0) => {
+      const el = $(id);
+      const s = (el?.textContent || '').replace(',', '');
+      const m = s.match(/-?\d+(\.\d+)?/);
+      return m ? Number(m[0]) : fallback;
+    };
+  
+    const run = () => {
+      const targetRev = num(($('cap_target_rev') as HTMLInputElement)?.value, 60000000);
+      const aov = num(parseFormattedNumber(($('cap_aov') as HTMLInputElement)?.value), 22900);
+      const days = num(($('cap_days') as HTMLInputElement)?.value, 30);
+      const peakShare = num(($('cap_peak_share') as HTMLInputElement)?.value, 0.75);
+      const peakWindow = Math.max(0.5, num(($('cap_peak_window') as HTMLInputElement)?.value, 2));
+      const refCap = readNumberFromText('sop_buffered_capacity_h') || readNumberFromText('cap_ref_capacity') || 8.5;
+  
+      const slotsInput = num(($('cap_fryer_slots_owned') as HTMLInputElement)?.value, 0);
+      const opsSlots = (window as any)?.ops?.fryerSlots || 0;
+      const slotsOwned = Math.max(0, Math.floor(slotsInput || opsSlots));
+      if (slotsInput === 0 && slotsOwned > 0) {
+        (($('cap_fryer_slots_owned') as HTMLInputElement).value = String(slotsOwned));
+      }
+  
+      const reqUnitsDay = Math.ceil((targetRev / Math.max(1, aov)) / Math.max(1, days));
+      const peakOrdersH = Math.ceil((reqUnitsDay * peakShare) / peakWindow);
+      const reqSlots = Math.max(1, Math.ceil(peakOrdersH / Math.max(0.1, refCap)));
+  
+      $('diag_req_units_day').textContent = reqUnitsDay.toLocaleString('ko-KR');
+      $('diag_peak_orders_h').textContent = peakOrdersH.toLocaleString('ko-KR');
+      $('diag_req_fryer_slots').textContent = reqSlots.toLocaleString('ko-KR');
+      $('diag_req_crew').textContent = reqSlots.toLocaleString('ko-KR');
+  
+      const v1 = $('diag_verdict_1');
+      const ok1 = slotsOwned >= reqSlots;
+      v1.textContent = ok1 ? '현장 충족 ✅' : '현장 미충족 ❌ (슬롯 보강 필요)';
+      v1.classList.toggle('is-ok', ok1);
+      v1.classList.toggle('is-critical', !ok1);
+  
+      const riders = num(($('diag_riders') as HTMLInputElement)?.value, 2);
+      const perRider = num(($('diag_orders_per_rider') as HTMLInputElement)?.value, 2.2);
+      const maxPromise = num(($('diag_max_promise_min') as HTMLInputElement)?.value, 35);
+      const cancelThresh = num(($('diag_cancel_thresh_pct') as HTMLInputElement)?.value, 3);
+  
+      const kitchenCap = Math.floor(slotsOwned * refCap);
+      const deliveryCap = Math.floor(riders * perRider);
+      const systemCap = Math.min(kitchenCap, deliveryCap);
+  
+      $('diag_kitchen_capacity').textContent = kitchenCap.toLocaleString('ko-KR');
+      $('diag_delivery_capacity').textContent = deliveryCap.toLocaleString('ko-KR');
+  
+      const overload = Math.max(0, peakOrdersH - systemCap);
+      const estPromise = Math.round(overload > 0 ? 15 + (overload / Math.max(1, systemCap)) * 30 : 15);
+      $('diag_est_promise_time').textContent = estPromise.toLocaleString('ko-KR');
+  
+      const estCancel = Math.max(0, (estPromise - maxPromise) / Math.max(1, maxPromise)) * cancelThresh * 2;
+      $('diag_est_cancel_rate').textContent = estCancel.toFixed(1);
+  
+      const v2 = $('diag_verdict_2');
+      const ok2 = estPromise <= maxPromise && estCancel <= cancelThresh && systemCap >= peakOrdersH;
+      v2.textContent = ok2 ? '시장 적합 ✅' : '시장 미적합 ❌ (피크 대기시간/취소율 초과)';
+      v2.classList.toggle('is-ok', ok2);
+      v2.classList.toggle('is-critical', !ok2);
+  
+      const final = $('diag_final_verdict');
+      final.innerHTML = (ok1 && ok2)
+        ? `현재 세팅으로 <b>월 매출 6천만</b> 달성이 가능합니다. (필요 슬롯 ${reqSlots.toLocaleString('ko-KR')}개, 피크 ${peakOrdersH.toLocaleString('ko-KR')}/h)`
+        : `현재 세팅으로 <b>월 매출 6천만</b> 달성이 <b>어렵습니다</b>. (필요 슬롯 ${reqSlots.toLocaleString('ko-KR')}개, 보유 ${slotsOwned.toLocaleString('ko-KR')}개, 시스템 처리 ${systemCap.toLocaleString('ko-KR')}/h)`;
+
+      ($('cap_diagnosis_results') as HTMLElement).style.display = 'block';
+      run();
+    };
+  
+    btn.addEventListener('click', run);
+  
+    if (sugg.aov) sugg.aov.addEventListener('click', () => {
+      const el = $('cap_aov') as HTMLInputElement;
+      const next = num(parseFormattedNumber(el.value), 0) + 1000;
+      el.value = next.toLocaleString('ko-KR');
+      run();
+    });
+  
+    if (sugg.peak) sugg.peak.addEventListener('click', () => {
+      const el = $('cap_peak_share') as HTMLInputElement;
+      const next = Math.max(0.30, (num(el.value, 0.75) - 0.10));
+      el.value = String(next.toFixed(2));
+      run();
+    });
+  
+    if (sugg.fryer) sugg.fryer.addEventListener('click', () => {
+      const el = $('cap_fryer_slots_owned') as HTMLInputElement;
+      el.value = String(Math.max(0, Math.floor(num(el.value, 0) + 1)));
+      run();
+    });
+  
+    if (sugg.pack) sugg.pack.addEventListener('click', () => {
+      const el = $('sop_transfer_time_sec') as HTMLInputElement;
+      el.value = String(Math.max(0, num(el.value, 15) - 10));
+      (window as any).runCalculationsAndUpdateUI?.();
+      run();
+    });
+  
+    if (sugg.op) sugg.op.addEventListener('click', () => {
+      const el = $('cap_fryer_slots_owned') as HTMLInputElement;
+      el.value = String(Math.max(0, Math.floor(num(el.value, 0) + 1)));
+      run();
+    });
+  }
+
+  function hydrateCenterOpsToggle() {
+    const el = document.getElementById('modal_center_roi_toggle') as HTMLInputElement | null;
+    if (!el) return;
+    const state: any = (window as any) || {};
+    const centerOps = state.dom?.centerOps || state.centerOps || {};
+    try {
+      el.checked = !!centerOps.useDetailedCenterOps;
+    } catch {
+      el.checked = false;
+    }
+    el.addEventListener('change', () => {
+      const next = !!el.checked;
+      if (state.dom?.centerOps) state.dom.centerOps.useDetailedCenterOps = next;
+      if (state.centerOps) state.centerOps.useDetailedCenterOps = next;
+      if (typeof (state.runCalculationsAndUpdateUI) === 'function') {
+        try { state.runCalculationsAndUpdateUI(); } catch (e) { console.warn(e); }
+      }
+    });
+  }
+
   initCapexModal(dom);
   setupListeners();
-  updateForceLevelButtons();
+  wireDiagnosis6000();
+  hydrateCenterOpsToggle();
   updateAllUI();
   
 });

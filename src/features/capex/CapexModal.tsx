@@ -124,7 +124,7 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
         noteEl.style.display = 'none';
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ apiKey: 'AIzaSyDDgIyq1naLE9Iv6AV_pYhzVgj6VZZXTiI' });
             const prompt = `대한민국 서울 기준, 10평(33m²) 규모의 배달 전문 소형 치킨 매장 개설 시 필요한 '설비 공사(설치/덕트/전기/소방)'의 평균 비용을 원화(KRW)로 알려주세요. 프랜차이즈 본사의 일반적인 감리비는 제외하고, 순수 시공 비용만 추정해주세요. 답변은 반드시 숫자 값만 포함하는 JSON 형식이어야 하며, 추정 근거를 포함해주세요. 예시: {\"averageCost\": 25000000, \"reasoning\": \"일반적인 소형 상업 주방 공사 단가와 소방 설비 의무 기준을 고려했을 때...\"}`;
             const schema = {
                 type: Type.OBJECT,
