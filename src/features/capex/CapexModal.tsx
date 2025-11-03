@@ -28,28 +28,53 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
         <input type="radio" id="modal_tab_center" name="modal_tabs">
         <label for="modal_tab_center">센터</label>
     `;
-    dom.modal.tabContentContainer.innerHTML = `
-        <div id="modal_tab_content_equip" class="tab-content"></div>
-        <div id="modal_tab_content_center" class="tab-content" style="display:none;">
-            <div class="lead" style="font-size: 16px; margin-bottom: 8px;">센터 운영 파라미터</div>
-            <label>순회시간/점포(분): <span class="slider-value">${dom.centerOps.patrolMin.value}</span>
-              <input type="range" min="5" max="60" value="${dom.centerOps.patrolMin.value}" class="slider-input" id="modal_center_patrol_min">
-            </label>
-            <label>세척·설비관리/점포(분): <span class="slider-value">${dom.centerOps.storeCleanMin.value}</span>
-              <input type="range" min="2" max="30" value="${dom.centerOps.storeCleanMin.value}" class="slider-input" id="modal_center_clean_min">
-            </label>
-            <label>QA·보충/점포(분): <span class="slider-value">${dom.centerOps.qaMin.value}</span>
-              <input type="range" min="5" max="45" value="${dom.centerOps.qaMin.value}" class="slider-input" id="modal_center_qa_min">
-            </label>
-            <div class="kpiBar" style="margin-top: 16px;">
-                <span class="chip">센터 필요 FTE: <b id="modal_center_fte_display">${dom.centerOps.outFTE.textContent}</b></span>
-            </div>
-            <div class="capex-toggle" style="margin-top: 16px;">
-                <input type="checkbox" id="modal_center_roi_toggle" ${dom.centerOps.useDetailedCenterOps ? 'checked' : ''}>
-                <label for="modal_center_roi_toggle">상세 인시 계산을 P&L/ROI에 반영</label>
-            </div>
+
+    // FIX: Refactored to use safe DOM manipulation instead of a large innerHTML string,
+    // which was causing a Vercel build error.
+    const equipContent = document.createElement('div');
+    equipContent.id = 'modal_tab_content_equip';
+    equipContent.className = 'tab-content';
+
+    const centerContent = document.createElement('div');
+    centerContent.id = 'modal_tab_content_center';
+    centerContent.className = 'tab-content';
+    centerContent.style.display = 'none';
+
+    centerContent.innerHTML = `
+        <div class="lead" style="font-size: 16px; margin-bottom: 8px;">센터 운영 파라미터</div>
+        <label>순회시간/점포(분): <span class="slider-value">${dom.centerOps.patrolMin.value}</span>
+          <input type="range" min="5" max="60" value="${dom.centerOps.patrolMin.value}" class="slider-input" id="modal_center_patrol_min">
+        </label>
+        <label>세척·설비관리/점포(분): <span class="slider-value">${dom.centerOps.storeCleanMin.value}</span>
+          <input type="range" min="2" max="30" value="${dom.centerOps.storeCleanMin.value}" class="slider-input" id="modal_center_clean_min">
+        </label>
+        <label>QA·보충/점포(분): <span class="slider-value">${dom.centerOps.qaMin.value}</span>
+          <input type="range" min="5" max="45" value="${dom.centerOps.qaMin.value}" class="slider-input" id="modal_center_qa_min">
+        </label>
+        <div class="kpiBar" style="margin-top: 16px;">
+            <span class="chip">센터 필요 FTE: <b id="modal_center_fte_display">${dom.centerOps.outFTE.textContent}</b></span>
         </div>
     `;
+
+    const toggleDiv = document.createElement('div');
+    toggleDiv.className = 'capex-toggle';
+    toggleDiv.style.marginTop = '16px';
+
+    const toggleInput = document.createElement('input');
+    toggleInput.type = 'checkbox';
+    toggleInput.id = 'modal_center_roi_toggle';
+    toggleInput.checked = dom.centerOps.useDetailedCenterOps;
+
+    const toggleLabel = document.createElement('label');
+    toggleLabel.htmlFor = 'modal_center_roi_toggle';
+    toggleLabel.textContent = '상세 인시 계산을 P&L/ROI에 반영';
+
+    toggleDiv.appendChild(toggleInput);
+    toggleDiv.appendChild(toggleLabel);
+    centerContent.appendChild(toggleDiv);
+
+    dom.modal.tabContentContainer.appendChild(equipContent);
+    dom.modal.tabContentContainer.appendChild(centerContent);
     
     const equipContentEl = document.getElementById('modal_tab_content_equip');
     
@@ -81,7 +106,6 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
             };
 
             const response = await ai.models.generateContent({
-                // FIX: Corrected model name from a typo 'gemini-2.fasth' to 'gemini-2.5-flash'.
                 model: 'gemini-2.5-flash',
                 contents: prompt,
                 config: {
@@ -195,10 +219,6 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
         });
     });
     
-    // FIX: This entire event handler had a TypeScript error and incorrect logic.
-    // The original code was not correctly mapping the slider ID to the corresponding dom.centerOps key.
-    // This new implementation correctly converts the snake_case slider ID to the camelCase key,
-    // handles the special case for 'storeCleanMin', and updates the correct input element.
     dom.modal.tabContentContainer.querySelectorAll('.slider-input').forEach(slider => {
       slider.addEventListener('input', (e) => {
         const target = e.target as HTMLInputElement;
@@ -207,7 +227,6 @@ function renderCapexModal(props: { level: 'A'|'B'|'C', localKit: OpsState['equip
         const snakeKey = target.id.replace('modal_center_', ''); // e.g., patrol_min
         let camelKey = snakeKey.replace(/_(\w)/g, (_, c) => c.toUpperCase()); // e.g., patrolMin
 
-        // Special handling for the 'storeCleanMin' key, which doesn't follow the standard pattern.
         if (camelKey === 'cleanMin') {
             camelKey = 'storeCleanMin';
         }
